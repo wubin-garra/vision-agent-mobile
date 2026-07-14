@@ -8,6 +8,7 @@ interface SessionState {
   memories: MemoryItem[];
   setMemories: (items: MemoryItem[]) => void;
   addMemory: (item: MemoryItem) => void;
+  removeMemory: (id: string) => void;
   currentInsight: StructuredInsight | null;
   setCurrentInsight: (insight: StructuredInsight | null) => void;
 }
@@ -18,6 +19,8 @@ export const useSessionStore = create<SessionState>((set) => ({
   memories: [],
   setMemories: (items) => set({ memories: items }),
   addMemory: (item) => set((state) => ({ memories: [item, ...state.memories] })),
+  removeMemory: (id) =>
+    set((state) => ({ memories: state.memories.filter((item) => item.id !== id) })),
   currentInsight: null,
   setCurrentInsight: (insight) => set({ currentInsight: insight }),
 }));

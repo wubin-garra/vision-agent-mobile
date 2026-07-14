@@ -34,7 +34,13 @@ npm start
 EXPO_PUBLIC_API_URL=http://192.168.x.x:8000
 ```
 
-### 打 Android APK（EAS 云构建）
+未设置时开发模式会尽量自动探测：
+- Android 模拟器：`http://10.0.2.2:8000`
+- iOS 模拟器：`http://localhost:8000`
+
+## 打包 APK
+
+### 方式一：EAS 云构建
 
 ```bash
 cd vision-agent-mobile
@@ -44,6 +50,45 @@ npm run build:apk
 ```
 
 构建完成后按终端提示下载 APK 安装到手机。
+
+### 方式二：本地 Gradle（需 Android SDK）
+
+环境要求：
+
+- Node.js 18+
+- JDK 17
+- Android SDK（需配置 `ANDROID_HOME`）
+
+```powershell
+# 1. 安装依赖（首次或依赖变更后）
+cd vision-agent-mobile
+npm install
+
+# 2. （可选）指定真机 API 地址后再打包
+$env:EXPO_PUBLIC_API_URL="http://192.168.x.x:8000"
+
+# 3. 构建 Release APK（推荐：仅 arm64，约 40 MB，适配现代真机）
+cd android
+.\gradlew.bat assembleRelease -PreactNativeArchitectures=arm64-v8a
+```
+
+构建完成后，安装包位于：
+
+```
+android/app/build/outputs/apk/release/app-release.apk
+```
+
+其他构建选项：
+
+```powershell
+# 兼容老 32 位设备（约 50–60 MB）
+.\gradlew.bat assembleRelease -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
+
+# 包含模拟器架构（约 105 MB，仅开发调试用）
+.\gradlew.bat assembleRelease
+```
+
+> 当前本地 Release 包若使用 debug 签名，只适合内测安装。上架应用商店需配置正式 keystore。
 
 ## 项目结构
 

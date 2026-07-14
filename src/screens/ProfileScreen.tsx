@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Image,
   RefreshControl,
@@ -16,12 +17,15 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CreditsBadge } from '@/components/CreditsBadge';
-import { AGENT_LABELS } from '@/constants/config';
-import { listMemories } from '@/services/api';
+import { ActionToast } from '@/components/ActionToast';
+import { DeleteMemoryDialog } from '@/components/DeleteMemoryDialog';
+import { AGENT_LABELS, formatApiError } from '@/constants/config';
+import { deleteMemory, listMemories } from '@/services/api';
 import { useSessionStore } from '@/store/session';
 import { lightColors, radius, spacing, typography } from '@/theme';
 import type { MemoryItem } from '@/types/insight';
 import type { MainTabParamList, RootStackParamList } from '@/types/navigation';
+import { hapticLight, hapticMedium } from '@/utils/haptics';
 
 type Nav = CompositeNavigationProp<
   BottomTabNavigationProp<MainTabParamList, 'Profile'>,
@@ -34,7 +38,10 @@ export function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState<Tab>('diary');
-  const { memories, setMemories } = useSessionStore();
+  const [deleteTarget, setDeleteTarget] = useState<MemoryItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const { memories, setMemories, removeMemory } = useSessionStore();
 
   const load = useCallback(async () => {
     try {
@@ -68,12 +75,39 @@ export function ProfileScreen() {
     });
   };
 
+  const confirmDelete = (item: MemoryItem) => {
+    hapticMedium();
+    setDeleteTarget(item);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget || deleting) return;
+    setDeleting(true);
+    try {
+      await deleteMemory(deleteTarget.id);
+      removeMemory(deleteTarget.id);
+      setDeleteTarget(null);
+      hapticLight();
+      setToastMessage('已删除这条日记');
+    } catch (error) {
+      Alert.alert('删除失败', formatApiError(error));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const renderDiaryItem = ({ item }: { item: MemoryItem }) => {
     const date = new Date(item.created_at);
     const monthDay = `${date.getMonth() + 1}月 ${date.getDate()}`;
 
     return (
-      <TouchableOpacity style={styles.diaryRow} onPress={() => openMemory(item)}>
+      <TouchableOpacity
+        style={styles.diaryRow}
+        onPress={() => openMemory(item)}
+        onLongPress={() => confirmDelete(item)}
+        delayLongPress={400}
+        activeOpacity={0.7}
+      >
         <Text style={styles.diaryDate}>{monthDay}</Text>
         <View style={styles.diaryContent}>
           <Text style={styles.diaryTitle}>{item.title}</Text>
@@ -200,6 +234,17 @@ export function ProfileScreen() {
           </View>
         )}
       </ScrollView>
+
+      <DeleteMemoryDialog
+        visible={deleteTarget !== null}
+        deleting={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => {
+          if (!deleting) setDeleteTarget(null);
+        }}
+      />
+
+      <ActionToast message={toastMessage} onHidden={() => setToastMessage(null)} />
     </SafeAreaView>
   );
 }

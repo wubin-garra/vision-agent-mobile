@@ -11,6 +11,7 @@ import type {
 } from '@/types/insight';
 import type { PosterData } from '@/components/SharePosterCard';
 import { assertUploadSuccess, uploadImageMultipart } from '@/utils/imageUpload';
+import { prepareImageForUpload } from '@/utils/prepareImage';
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -20,31 +21,9 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export async function analyzeImage(
-  imageUri: string,
-  options?: {
-    locale?: string;
-    agentOverride?: AgentId;
-    latitude?: number;
-    longitude?: number;
-  },
-): Promise<AnalyzeResponse> {
-  const parameters: Record<string, string> = {
-    locale: options?.locale ?? 'zh-CN',
-  };
-  if (options?.agentOverride) {
-    parameters.agent_override = options.agentOverride;
-  }
-  if (options?.latitude != null) {
-    parameters.latitude = String(options.latitude);
-  }
-  if (options?.longitude != null) {
-    parameters.longitude = String(options.longitude);
-  }
-
-  const result = await uploadImageMultipart('/v1/analyze', imageUri, parameters);
-  const data = JSON.parse(assertUploadSuccess(result)) as AnalyzeResponse & { image_url: string };
-
+function resolveMediaUrls<T extends { image_url: string; thumbnail_url: string }>(
+  data: T,
+): T {
   return {
     ...data,
     image_url: data.image_url.startsWith('http')
@@ -56,24 +35,12 @@ export async function analyzeImage(
   };
 }
 
-export interface StreamAnalyzeCallbacks {
-  onStatus?: (stage: string) => void;
-  onAgent?: (agentId: AgentId) => void;
-  onPartial?: (partial: { title: string; category: string; confidence: number }) => void;
-  onComplete?: (result: AnalyzeResponse) => void;
-  onError?: (error: Error) => void;
-}
-
-export async function analyzeImageStream(
-  imageUri: string,
-  callbacks: StreamAnalyzeCallbacks,
-  options?: {
-    locale?: string;
-    agentOverride?: AgentId;
-    latitude?: number;
-    longitude?: number;
-  },
-): Promise<AnalyzeResponse | null> {
+function buildAnalyzeParameters(options?: {
+  locale?: string;
+  agentOverride?: AgentId;
+  latitude?: number;
+  longitude?: number;
+}): Record<string, string> {
   const parameters: Record<string, string> = {
     locale: options?.locale ?? 'zh-CN',
   };
@@ -86,48 +53,71 @@ export async function analyzeImageStream(
   if (options?.longitude != null) {
     parameters.longitude = String(options.longitude);
   }
+  return parameters;
+}
 
-  let result: AnalyzeResponse | null = null;
+export async function analyzeImage(
+  imageUri: string,
+  options?: {
+    locale?: string;
+    agentOverride?: AgentId;
+    latitude?: number;
+    longitude?: number;
+  },
+): Promise<AnalyzeResponse> {
+  const uploadUri = await prepareImageForUpload(imageUri);
+  const result = await uploadImageMultipart(
+    '/v1/analyze',
+    uploadUri,
+    buildAnalyzeParameters(options),
+  );
+  const data = JSON.parse(assertUploadSuccess(result)) as AnalyzeResponse & {
+    image_url: string;
+  };
+  return resolveMediaUrls(data);
+}
 
+export interface StreamAnalyzeCallbacks {
+  onStatus?: (stage: string) => void;
+  onAgent?: (agentId: AgentId) => void;
+  onThinking?: (payload: { step: string; index: number }) => void;
+  onPartial?: (partial: { title: string; category: string; confidence: number }) => void;
+  onComplete?: (result: AnalyzeResponse) => void;
+  onError?: (error: Error) => void;
+}
+
+/**
+ * 拍照分析入口。
+ * 不用 /v1/analyze/stream：Expo FileSystem.uploadAsync 对 SSE 经常空 body，会导致分析失败。
+ * 保留 onStatus/onThinking 等回调接口，供食品扫描等 UI 驱动本地思考动画。
+ */
+export async function analyzeImageStream(
+  imageUri: string,
+  callbacks: StreamAnalyzeCallbacks,
+  options?: {
+    locale?: string;
+    agentOverride?: AgentId;
+    latitude?: number;
+    longitude?: number;
+  },
+): Promise<AnalyzeResponse | null> {
   try {
-    const upload = await uploadImageMultipart('/v1/analyze/stream', imageUri, parameters);
-    const text = assertUploadSuccess(upload);
-
-    for (const block of text.split('\n\n')) {
-      const lines = block.split('\n');
-      let event = 'message';
-      let data = '';
-      for (const line of lines) {
-        if (line.startsWith('event:')) event = line.slice(6).trim();
-        if (line.startsWith('data:')) data = line.slice(5).trim();
-      }
-      if (!data) continue;
-
-      const parsed = JSON.parse(data);
-      if (event === 'status') callbacks.onStatus?.(parsed.stage);
-      if (event === 'agent') callbacks.onAgent?.(parsed.agent_id);
-      if (event === 'partial') callbacks.onPartial?.(parsed);
-      if (event === 'complete') {
-        const resolved: AnalyzeResponse = {
-          ...parsed,
-          image_url: parsed.image_url.startsWith('http')
-            ? parsed.image_url
-            : `${API_BASE_URL}${parsed.image_url}`,
-          thumbnail_url: parsed.thumbnail_url.startsWith('http')
-            ? parsed.thumbnail_url
-            : `${API_BASE_URL}${parsed.thumbnail_url}`,
-        };
-        result = resolved;
-        callbacks.onComplete?.(resolved);
-      }
-    }
+    callbacks.onStatus?.('captioning');
+    callbacks.onStatus?.('analyzing');
+    const result = await analyzeImage(imageUri, options);
+    callbacks.onAgent?.(result.agent_id);
+    callbacks.onPartial?.({
+      title: result.insight.title,
+      category: result.insight.category,
+      confidence: result.insight.confidence,
+    });
+    callbacks.onComplete?.(result);
+    return result;
   } catch (error) {
     const err = error instanceof Error ? error : new Error('分析失败');
     callbacks.onError?.(err);
     throw err;
   }
-
-  return result;
 }
 
 export async function followUp(
@@ -165,6 +155,7 @@ export function mapFollowUpsToQA(followups: FollowUpItem[]) {
   return followups.map((item) => ({
     question: item.question,
     answer: item.answer,
+    structuredAnswer: item.structured_answer ?? undefined,
   }));
 }
 
@@ -180,6 +171,13 @@ export async function listMemories(): Promise<MemoryItem[]> {
       ? item.thumbnail_url
       : `${API_BASE_URL}${item.thumbnail_url}`,
   }));
+}
+
+export async function deleteMemory(memoryId: string): Promise<void> {
+  const response = await fetch(buildApiUrl(`/v1/memories/${memoryId}`), {
+    method: 'DELETE',
+  });
+  await handleResponse<{ ok: boolean }>(response);
 }
 
 export async function listAgents(): Promise<AgentInfo[]> {
@@ -221,11 +219,14 @@ export function buildInsightSummary(insight: StructuredInsight): string {
 
 export function buildPosterData(insight: StructuredInsight): PosterData {
   const share = insight.share_card;
+  const nutritionLine = insight.nutrition
+    ? `🔥 ${insight.nutrition.calories_current}kcal`
+    : undefined;
   return {
     headline: share?.headline || insight.title,
     subtitle: insight.subtitle || insight.category,
     quote: share?.quote || insight.narrative || buildInsightSummary(insight),
-    cta: share?.cta || insight.context.practical || undefined,
+    cta: share?.cta || nutritionLine || insight.context.practical || undefined,
     brand: 'Vision Agent',
     signature: 'Seeing with Vision Agent',
   };

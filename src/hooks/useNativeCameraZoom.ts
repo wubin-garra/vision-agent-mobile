@@ -238,9 +238,45 @@ export function useNativeCameraZoom(facing: 'front' | 'back') {
     const snapped = nearestPreset(zoomRef.current);
     const distance = Math.abs(PRESET_ZOOM[snapped] - zoomRef.current);
     if (distance <= PRESET_SNAP_THRESHOLD) {
-      syncActivePreset(snapped);
+      applyPreset(snapped);
+      return;
     }
-  }, [syncActivePreset]);
+    syncActivePreset(snapped);
+  }, [applyPreset, syncActivePreset]);
+
+  /** 拍照前立即锁定当前预设的变焦与镜头，避免预览 2x 但成片仍是 1x */
+  const prepareForCapture = useCallback(async () => {
+    cancelAnimRef.current?.();
+    animGenerationRef.current += 1;
+    isPinchingRef.current = false;
+
+    const preset = targetPresetRef.current;
+    syncActivePreset(preset);
+    const targetZoom = applyLensForPreset(preset);
+    setZoomImmediate(targetZoom);
+    pinchBaseRef.current = targetZoom;
+
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => resolve());
+      });
+    });
+
+    const isTele = preset === 'tele';
+    const lensDelay =
+      facing === 'back'
+        ? Platform.OS === 'ios'
+          ? isTele
+            ? 280
+            : 200
+          : isTele
+            ? 180
+            : 120
+        : 80;
+    await new Promise((resolve) => setTimeout(resolve, lensDelay));
+
+    return { preset, zoom: zoomRef.current };
+  }, [applyLensForPreset, facing, setZoomImmediate, syncActivePreset]);
 
   useEffect(() => {
     resetZoom();
@@ -266,6 +302,7 @@ export function useNativeCameraZoom(facing: 'front' | 'back') {
     availableLenses,
     applyPreset,
     resetZoom,
+    prepareForCapture,
     onAvailableLensesChanged,
     onPinchBegin,
     onPinchUpdate,

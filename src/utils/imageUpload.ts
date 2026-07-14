@@ -23,5 +23,10 @@ export function assertUploadSuccess(result: FileSystem.FileSystemUploadResult): 
   if (result.status < 200 || result.status >= 300) {
     throw new Error(result.body || `HTTP ${result.status}`);
   }
+  if (!result.body?.trim()) {
+    throw new Error(
+      `后端返回空响应 (HTTP ${result.status})。若接口为 SSE 流式，Expo 可能无法正确读取，请改用 /v1/analyze。`,
+    );
+  }
   return result.body;
 }

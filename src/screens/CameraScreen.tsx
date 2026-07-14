@@ -1,8 +1,9 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Image,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -16,12 +17,14 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AnalysisThinkingOverlay } from '@/components/AnalysisThinkingOverlay';
 import { CreditsBadge } from '@/components/CreditsBadge';
 import { API_BASE_URL, API_MISCONFIGURED, formatApiError } from '@/constants/config';
 import { AgentDetailSheet } from '@/components/AgentDetailSheet';
 import { AgentModeCarousel } from '@/components/AgentModeCarousel';
 import { CameraScanFrame } from '@/components/CameraScanFrame';
 import { ZoomSelector } from '@/components/ZoomSelector';
+import { FOOD_SCAN_THINKING_STEP_DURATIONS_MS, FOOD_SCAN_THINKING_STEPS } from '@/constants/foodScanThinking';
 import {
   agentToCameraMode,
   cameraModeToAgent,
@@ -35,6 +38,7 @@ import { useSessionStore } from '@/store/session';
 import { colors, lightColors, radius, spacing, typography } from '@/theme';
 import type { RootStackParamList } from '@/types/navigation';
 import { getCurrentCoordinates } from '@/utils/location';
+import { cropCaptureToZoom, getCaptureCropRatio } from '@/utils/captureCrop';
 import { hapticLight, hapticMedium } from '@/utils/haptics';
 
 type StackNav = NativeStackNavigationProp<RootStackParamList>;
@@ -45,6 +49,11 @@ export function CameraScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [analyzing, setAnalyzing] = useState(false);
   const [status, setStatus] = useState('');
+  const [analyzeStage, setAnalyzeStage] = useState('');
+  const [thinkingStep, setThinkingStep] = useState<string | undefined>();
+  const [thinkingSteps, setThinkingSteps] = useState<string[]>([]);
+  const thinkingStepsRef = useRef<string[]>([]);
+  const [previewUri, setPreviewUri] = useState<string | null>(null);
   const [facing, setFacing] = useState<'front' | 'back'>('back');
   const {
     zoom,
@@ -52,6 +61,7 @@ export function CameraScreen() {
     presets: zoomPresets,
     applyPreset,
     resetZoom,
+    prepareForCapture,
     onAvailableLensesChanged,
     onPinchBegin,
     onPinchUpdate,
@@ -62,6 +72,44 @@ export function CameraScreen() {
   const [detailVisible, setDetailVisible] = useState(false);
   const { selectedAgent, setSelectedAgent } = useSessionStore();
   const activeMode = findCameraMode(agentToCameraMode(selectedAgent));
+  const isFoodScanMode = selectedAgent === 'food_scan';
+
+  useEffect(() => {
+    if (!analyzing || !isFoodScanMode) return;
+
+    let stepIndex = 0;
+    let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+    const showStep = (index: number) => {
+      const step = FOOD_SCAN_THINKING_STEPS[index];
+      setThinkingStep(step);
+      if (!thinkingStepsRef.current.includes(step)) {
+        thinkingStepsRef.current = [...thinkingStepsRef.current, step];
+        setThinkingSteps(thinkingStepsRef.current);
+      }
+    };
+
+    const scheduleNext = () => {
+      if (cancelled) return;
+      showStep(stepIndex);
+
+      const duration = FOOD_SCAN_THINKING_STEP_DURATIONS_MS[stepIndex] ?? 0;
+      if (duration <= 0 || stepIndex >= FOOD_SCAN_THINKING_STEPS.length - 1) return;
+
+      timeoutId = setTimeout(() => {
+        stepIndex = Math.min(stepIndex + 1, FOOD_SCAN_THINKING_STEPS.length - 1);
+        scheduleNext();
+      }, duration);
+    };
+
+    scheduleNext();
+
+    return () => {
+      cancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [analyzing, isFoodScanMode]);
 
   const runAnalyze = async (uri: string) => {
     if (API_MISCONFIGURED) {
@@ -69,17 +117,27 @@ export function CameraScreen() {
       return;
     }
 
+    setPreviewUri(uri);
+    setLastPhoto(uri);
     setAnalyzing(true);
     setStatus('正在理解画面…');
-    setLastPhoto(uri);
+    setAnalyzeStage('captioning');
+    setThinkingStep(undefined);
+    thinkingStepsRef.current = [];
+    setThinkingSteps([]);
     try {
       const coordinates = await getCurrentCoordinates();
       const result = await analyzeImageStream(
         uri,
         {
           onStatus: (stage) => {
+            setAnalyzeStage(stage);
             if (stage === 'routing') setStatus('正在选择智能体…');
-            if (stage === 'analyzing') setStatus('正在生成洞察…');
+            if (stage === 'analyzing') setStatus('正在生成营养报告…');
+            if (stage === 'captioning') setStatus('正在分析图像…');
+          },
+          onThinking: () => {
+            // 步骤节奏由客户端 FOOD_SCAN_THINKING_STEP_DURATIONS_MS 控制
           },
           onPartial: (partial) => setStatus(`${partial.title} · ${partial.category}`),
         },
@@ -99,20 +157,49 @@ export function CameraScreen() {
         followupChips: result.followup_chips,
         agentId: result.agent_id,
         entryMode: 'fresh',
+        thinkingSteps:
+          thinkingStepsRef.current.length > 0 ? thinkingStepsRef.current : undefined,
       });
     } catch (error) {
       Alert.alert('分析失败', formatApiError(error));
     } finally {
       setAnalyzing(false);
       setStatus('');
+      setAnalyzeStage('');
+      setThinkingStep(undefined);
+      thinkingStepsRef.current = [];
+      setThinkingSteps([]);
+      setPreviewUri(null);
     }
   };
 
   const capturePhoto = async () => {
     if (!cameraRef.current || analyzing) return;
     hapticMedium();
-    const photo = await cameraRef.current.takePictureAsync({ quality: 0.8 });
-    if (photo?.uri) await runAnalyze(photo.uri);
+    try {
+      const { zoom: captureZoom } = await prepareForCapture();
+      await new Promise((resolve) => setTimeout(resolve, Platform.OS === 'ios' ? 60 : 40));
+
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.8,
+        shutterSound: false,
+        skipProcessing: false,
+      });
+
+      if (!photo?.uri) return;
+
+      const cropRatio = facing === 'back' ? getCaptureCropRatio(captureZoom) : 1;
+      const uri = await cropCaptureToZoom(
+        photo.uri,
+        photo.width ?? 0,
+        photo.height ?? 0,
+        cropRatio,
+      );
+
+      await runAnalyze(uri);
+    } catch (error) {
+      Alert.alert('拍照失败', error instanceof Error ? error.message : '请稍后重试');
+    }
   };
 
   const pickFromGallery = async () => {
@@ -178,8 +265,8 @@ export function CameraScreen() {
 
   return (
     <View style={styles.root}>
-      <GestureDetector gesture={pinchGesture}>
-        <View style={StyleSheet.absoluteFill}>
+      {!analyzing ? (
+        <GestureDetector gesture={pinchGesture}>
           <CameraView
             ref={cameraRef}
             style={StyleSheet.absoluteFill}
@@ -189,8 +276,16 @@ export function CameraScreen() {
             onCameraReady={handleCameraReady}
             onAvailableLensesChanged={onAvailableLensesChanged}
           />
-        </View>
-      </GestureDetector>
+        </GestureDetector>
+      ) : previewUri ? (
+        <Image
+          source={{ uri: previewUri }}
+          style={styles.frozenPreview}
+          resizeMode="cover"
+        />
+      ) : (
+        <View style={styles.frozenPreview} />
+      )}
 
       {/* Chance 风格四角扫描框 */}
       <CameraScanFrame />
@@ -319,12 +414,24 @@ export function CameraScreen() {
         onClose={() => setDetailVisible(false)}
         onTry={() => setDetailVisible(false)}
       />
+
+      {analyzing && isFoodScanMode ? (
+        <AnalysisThinkingOverlay
+          imageUri={previewUri}
+          stage={analyzeStage}
+          thinkingStep={thinkingStep}
+        />
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: lightColors.tabBarDark },
+  frozenPreview: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: lightColors.tabBarDark,
+  },
   center: {
     flex: 1,
     backgroundColor: colors.cameraBg,
