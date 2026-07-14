@@ -16,7 +16,8 @@
 ```bash
 # 1. 启动后端（另开终端）
 cd ../vision-agent-api
-.venv\Scripts\uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+npm install
+npm run dev
 
 # 2. 启动 App
 cd vision-agent-mobile
@@ -25,17 +26,24 @@ npm start
 
 ### API 地址配置
 
-默认：
-- Android 模拟器：`http://10.0.2.2:8000`
-- iOS 模拟器：`http://localhost:8000`
+正式包默认：`https://vision-agent-api.onrender.com`（见 `.env` / `eas.json`）
 
-真机调试时设置环境变量：
+本地调试可改 `.env`：
 
 ```bash
-cd .\vision-agent-mobile\
-set EXPO_PUBLIC_API_URL=http://192.168.x.x:8000
-npm start
+EXPO_PUBLIC_API_URL=http://192.168.x.x:8000
 ```
+
+### 打 Android APK（EAS 云构建）
+
+```bash
+cd vision-agent-mobile
+npm install
+npx eas-cli login
+npm run build:apk
+```
+
+构建完成后按终端提示下载 APK 安装到手机。
 
 ## 项目结构
 

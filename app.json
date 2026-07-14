@@ -17,6 +17,7 @@
       }
     },
     "android": {
+      "package": "com.wubingarra.visionagent",
       "usesCleartextTraffic": true,
       "permissions": [
         "android.permission.CAMERA",
@@ -48,7 +49,11 @@
       ]
     ],
     "extra": {
-      "apiBaseUrl": "http://192.168.71.93:8000"
-    }
+      "apiBaseUrl": "https://vision-agent-api.onrender.com",
+      "eas": {
+        "projectId": "ce50e9cc-1580-4bf0-af21-05efa360e995"
+      }
+    },
+    "owner": "wubin1987107"
   }
 }

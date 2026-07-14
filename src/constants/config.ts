@@ -50,9 +50,16 @@ function resolveDevApiUrl(): string {
   return 'http://请配置局域网IP:8000';
 }
 
+/** 正式包默认指向线上 API（可用 EXPO_PUBLIC_API_URL 覆盖） */
+const PRODUCTION_API_URL = 'https://vision-agent-api.onrender.com';
+
 const envApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
 export const API_BASE_URL =
-  envApiUrl && envApiUrl.length > 0 ? normalizeBaseUrl(envApiUrl) : resolveDevApiUrl();
+  envApiUrl && envApiUrl.length > 0
+    ? normalizeBaseUrl(envApiUrl)
+    : __DEV__
+      ? resolveDevApiUrl()
+      : PRODUCTION_API_URL;
 
 export function buildApiUrl(path: string): string {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
@@ -76,9 +83,9 @@ export function formatApiError(error: unknown): string {
   if (API_MISCONFIGURED) {
     return (
       '未配置后端地址。\n\n' +
-      '真机调试请在 vision-agent-mobile/.env 设置：\n' +
-      'EXPO_PUBLIC_API_URL=http://你的电脑IP:8000\n\n' +
-      'Windows 运行 ipconfig 查看 IPv4 地址，配置后重启 npm start。'
+      '可在 vision-agent-mobile/.env 设置：\n' +
+      'EXPO_PUBLIC_API_URL=https://vision-agent-api.onrender.com\n' +
+      '或本地调试：EXPO_PUBLIC_API_URL=http://你的电脑IP:8000'
     );
   }
 
@@ -95,12 +102,10 @@ export function formatApiError(error: unknown): string {
   ) {
     return (
       `无法连接后端 (${API_BASE_URL})\n\n` +
-      '常见原因：电脑 IP 变了（重新运行 ipconfig 查看）。\n\n' +
       '请确认：\n' +
-      '1. 后端已启动：uvicorn app.main:app --host 0.0.0.0 --port 8000\n' +
-      '2. .env 更新为：EXPO_PUBLIC_API_URL=http://当前电脑IP:8000\n' +
-      '3. 重启 npm start 并 Reload App\n' +
-      '4. 手机浏览器打开 http://电脑IP:8000/health 能访问'
+      '1. 线上 API 可访问：打开 /health\n' +
+      '2. Render 免费档可能冷启动，首次等待 30–60 秒后重试\n' +
+      '3. 本地调试时检查 EXPO_PUBLIC_API_URL 与后端是否已启动'
     );
   }
 
