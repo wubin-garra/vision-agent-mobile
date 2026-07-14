@@ -59,6 +59,7 @@ export async function analyzeImage(
 export interface StreamAnalyzeCallbacks {
   onStatus?: (stage: string) => void;
   onAgent?: (agentId: AgentId) => void;
+  onThinking?: (payload: { step: string; index: number }) => void;
   onPartial?: (partial: { title: string; category: string; confidence: number }) => void;
   onComplete?: (result: AnalyzeResponse) => void;
   onError?: (error: Error) => void;
@@ -106,6 +107,7 @@ export async function analyzeImageStream(
       const parsed = JSON.parse(data);
       if (event === 'status') callbacks.onStatus?.(parsed.stage);
       if (event === 'agent') callbacks.onAgent?.(parsed.agent_id);
+      if (event === 'thinking') callbacks.onThinking?.(parsed);
       if (event === 'partial') callbacks.onPartial?.(parsed);
       if (event === 'complete') {
         const resolved: AnalyzeResponse = {
@@ -165,6 +167,7 @@ export function mapFollowUpsToQA(followups: FollowUpItem[]) {
   return followups.map((item) => ({
     question: item.question,
     answer: item.answer,
+    structuredAnswer: item.structured_answer ?? undefined,
   }));
 }
 
@@ -180,6 +183,13 @@ export async function listMemories(): Promise<MemoryItem[]> {
       ? item.thumbnail_url
       : `${API_BASE_URL}${item.thumbnail_url}`,
   }));
+}
+
+export async function deleteMemory(memoryId: string): Promise<void> {
+  const response = await fetch(buildApiUrl(`/v1/memories/${memoryId}`), {
+    method: 'DELETE',
+  });
+  await handleResponse<{ ok: boolean }>(response);
 }
 
 export async function listAgents(): Promise<AgentInfo[]> {
@@ -221,11 +231,14 @@ export function buildInsightSummary(insight: StructuredInsight): string {
 
 export function buildPosterData(insight: StructuredInsight): PosterData {
   const share = insight.share_card;
+  const nutritionLine = insight.nutrition
+    ? `🔥 ${insight.nutrition.calories_current}kcal`
+    : undefined;
   return {
     headline: share?.headline || insight.title,
     subtitle: insight.subtitle || insight.category,
     quote: share?.quote || insight.narrative || buildInsightSummary(insight),
-    cta: share?.cta || insight.context.practical || undefined,
+    cta: share?.cta || nutritionLine || insight.context.practical || undefined,
     brand: 'Vision Agent',
     signature: 'Seeing with Vision Agent',
   };

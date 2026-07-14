@@ -26,6 +26,13 @@ export const cameraModes: CameraModeItem[] = [
     description: '分析配色、廓形与场合匹配度，给出可执行的穿搭改进建议与风格标签。',
   },
   {
+    id: 'food_scan',
+    label: '食识拍',
+    emoji: '🔎',
+    prompt: '扫描你的餐食，即可查看热量、蛋白质、碳水化合物等信息。',
+    description: '识别盘中食材，估算热量与三大营养素，提供饮食建议与过敏原提示。',
+  },
+  {
     id: 'food_explorer',
     label: '美食探索',
     emoji: '🍜',
