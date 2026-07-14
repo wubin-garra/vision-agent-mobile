@@ -123,12 +123,26 @@ export async function analyzeImageStream(
 export async function followUp(
   memoryId: string,
   question: string,
-  locale = 'zh-CN',
+  options?: {
+    locale?: string;
+    latitude?: number;
+    longitude?: number;
+  },
 ): Promise<FollowUpResponse> {
+  const locale = options?.locale ?? 'zh-CN';
+  const body: Record<string, unknown> = {
+    memory_id: memoryId,
+    question,
+    locale,
+  };
+  if (options?.latitude != null && options?.longitude != null) {
+    body.latitude = options.latitude;
+    body.longitude = options.longitude;
+  }
   const response = await fetch(buildApiUrl('/v1/followup'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ memory_id: memoryId, question, locale }),
+    body: JSON.stringify(body),
   });
   return handleResponse<FollowUpResponse>(response);
 }

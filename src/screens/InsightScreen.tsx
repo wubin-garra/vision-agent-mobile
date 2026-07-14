@@ -34,6 +34,7 @@ import type { RootStackParamList } from '@/types/navigation';
 
 import { colors, lightColors, radius, spacing, typography } from '@/theme';
 import { hapticLight } from '@/utils/haptics';
+import { ensureLocationForNearby, looksLikeNearbyQuery } from '@/utils/location';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Insight'>;
 
@@ -143,7 +144,19 @@ export function InsightScreen({ navigation, route }: Props) {
     Keyboard.dismiss();
     setLoading(true);
     try {
-      const result = await followUp(memoryId, question.trim());
+      let latitude: number | undefined;
+      let longitude: number | undefined;
+
+      if (looksLikeNearbyQuery(question)) {
+        const coords = await ensureLocationForNearby();
+        latitude = coords?.latitude;
+        longitude = coords?.longitude;
+      }
+
+      const result = await followUp(memoryId, question.trim(), {
+        latitude,
+        longitude,
+      });
       setQaList((prev) => [
         ...prev,
         {
