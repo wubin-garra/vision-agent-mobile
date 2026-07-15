@@ -21,6 +21,7 @@ import { ActionToast } from '@/components/ActionToast';
 import { DeleteMemoryDialog } from '@/components/DeleteMemoryDialog';
 import { AGENT_LABELS, formatApiError } from '@/constants/config';
 import { deleteMemory, listMemories } from '@/services/api';
+import { track } from '@/services/analytics';
 import { useSessionStore } from '@/store/session';
 import { lightColors, radius, spacing, typography } from '@/theme';
 import type { MemoryItem } from '@/types/insight';
@@ -63,6 +64,11 @@ export function ProfileScreen() {
   );
 
   const openMemory = (item: MemoryItem) => {
+    track('memory_open', {
+      memory_id: item.id,
+      agent: item.agent_id,
+      from: 'profile',
+    });
     navigation.navigate('Insight', {
       memoryId: item.id,
       imageUri: item.image_url,
@@ -85,6 +91,10 @@ export function ProfileScreen() {
     setDeleting(true);
     try {
       await deleteMemory(deleteTarget.id);
+      track('memory_delete', {
+        memory_id: deleteTarget.id,
+        agent: deleteTarget.agent_id,
+      });
       removeMemory(deleteTarget.id);
       setDeleteTarget(null);
       hapticLight();

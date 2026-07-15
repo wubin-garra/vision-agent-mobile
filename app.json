@@ -17,7 +17,7 @@
       }
     },
     "android": {
-      "package": "com.wubingarra.visionagent",
+      "package": "com.anonymous.visionagentmobile",
       "usesCleartextTraffic": true,
       "permissions": [
         "android.permission.CAMERA",
@@ -33,8 +33,7 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.visionagentmobile"
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -47,7 +46,8 @@
           "microphonePermission": "Vision Agent 需要使用麦克风进行语音输入。",
           "speechRecognitionPermission": "Vision Agent 需要语音识别权限，以便将你说的话转为文字追问。"
         }
-      ]
+      ],
+      "expo-localization"
     ],
     "extra": {
       "apiBaseUrl": "https://vision-agent-api.onrender.com",

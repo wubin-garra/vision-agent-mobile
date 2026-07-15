@@ -38,6 +38,18 @@ EXPO_PUBLIC_API_URL=http://192.168.x.x:8000
 - Android 模拟器：`http://10.0.2.2:8000`
 - iOS 模拟器：`http://localhost:8000`
 
+### PostHog 埋点
+
+在 [PostHog](https://posthog.com) 创建项目后，把 **Project API Key** 写入 `.env`（或 EAS `env`）：
+
+```bash
+EXPO_PUBLIC_POSTHOG_API_KEY=phc_xxxxxxxx
+# 可选，默认美区
+EXPO_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
+```
+
+未配置 key 时 SDK 自动禁用，不会上报。主要事件：`app_open`、屏幕浏览、`camera_mode_select`、`analyze_*`、`insight_view`、`followup_ask`、`location_prompt`、`memory_open` / `memory_delete`、`share_poster`。
+
 ## 打包 APK
 
 ### 方式一：EAS 云构建

@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { featuredPrompts, perspectives } from '@/constants/homeContent';
 import { listMemories } from '@/services/api';
+import { track } from '@/services/analytics';
 import { useSessionStore } from '@/store/session';
 import { lightColors, radius, spacing, typography } from '@/theme';
 import type { MainTabParamList, RootStackParamList } from '@/types/navigation';
@@ -39,6 +40,11 @@ export function HomeScreen() {
   );
 
   const openMemory = (item: MemoryItem) => {
+    track('memory_open', {
+      memory_id: item.id,
+      agent: item.agent_id,
+      from: 'home',
+    });
     navigation.navigate('Insight', {
       memoryId: item.id,
       imageUri: item.image_url,

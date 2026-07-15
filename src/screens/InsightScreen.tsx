@@ -29,6 +29,7 @@ import { SharePosterCard, type PosterData } from '@/components/SharePosterCard';
 import { AGENT_LABELS } from '@/constants/config';
 import { useKeyboardInset } from '@/hooks/useKeyboardInset';
 import { buildPosterData, followUp, getMemory, mapFollowUpsToQA, requestSharePoster } from '@/services/api';
+import { track } from '@/services/analytics';
 import type { StructuredFollowUpAnswer } from '@/types/insight';
 import type { RootStackParamList } from '@/types/navigation';
 
@@ -62,6 +63,15 @@ export function InsightScreen({ navigation, route }: Props) {
   const [thinkingVisible, setThinkingVisible] = useState(false);
   const [fullImageVisible, setFullImageVisible] = useState(false);
   const keyboardInset = useKeyboardInset();
+  const followupSourceRef = useRef<'chip' | 'input'>('input');
+
+  useEffect(() => {
+    track('insight_view', {
+      memory_id: memoryId,
+      agent: agentId,
+      entry_mode: entryMode,
+    });
+  }, [memoryId, agentId, entryMode]);
 
   const scrollToEnd = (animated = true) => {
     requestAnimationFrame(() => {
@@ -133,6 +143,7 @@ export function InsightScreen({ navigation, route }: Props) {
   };
 
   const prefillQuestion = (question: string) => {
+    followupSourceRef.current = 'chip';
     setCustomQuestion(question);
     requestAnimationFrame(() => {
       inputBarRef.current?.focus();
@@ -141,8 +152,16 @@ export function InsightScreen({ navigation, route }: Props) {
 
   const askQuestion = async (question: string) => {
     if (!question.trim() || loading) return;
+    const source = followupSourceRef.current;
+    followupSourceRef.current = 'input';
     Keyboard.dismiss();
     setLoading(true);
+    track('followup_ask', {
+      memory_id: memoryId,
+      agent: agentId,
+      source,
+      is_nearby_query: looksLikeNearbyQuery(question),
+    });
     try {
       let latitude: number | undefined;
       let longitude: number | undefined;
@@ -219,6 +238,7 @@ export function InsightScreen({ navigation, route }: Props) {
           message: `${posterData.headline}\n${posterData.quote}`,
         });
       }
+      track('share_poster', { memory_id: memoryId, agent: agentId });
     } catch (error) {
       Alert.alert('分享失败', error instanceof Error ? error.message : '请稍后重试');
     }
@@ -408,7 +428,11 @@ export function InsightScreen({ navigation, route }: Props) {
           <InsightInputBar
             ref={inputBarRef}
             value={customQuestion}
-            onChangeText={setCustomQuestion}
+            onChangeText={(text) => {
+              // chip 预填不经此回调；用户键入/语音后视为 input
+              followupSourceRef.current = 'input';
+              setCustomQuestion(text);
+            }}
             onSubmit={() => askQuestion(customQuestion)}
             onFocus={handleInputFocus}
             loading={loading}

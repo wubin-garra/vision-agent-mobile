@@ -1,6 +1,8 @@
 import { Alert, Linking } from 'react-native';
 import * as Location from 'expo-location';
 
+import { track } from '@/services/analytics';
+
 export interface GeoCoordinates {
   latitude: number;
   longitude: number;
@@ -67,13 +69,23 @@ export async function ensureLocationForNearby(): Promise<GeoCoordinates | null> 
 
     const accepted = await confirmLocationPrompt();
     if (!accepted) {
+      track('location_prompt', { result: 'deny_prompt', context: 'nearby_followup' });
       return null;
     }
 
+    track('location_prompt', { result: 'accept_prompt', context: 'nearby_followup' });
+
     const { status, canAskAgain } = await Location.requestForegroundPermissionsAsync();
     if (status === 'granted') {
+      track('location_prompt', { result: 'grant', context: 'nearby_followup' });
       return readCurrentPosition();
     }
+
+    track('location_prompt', {
+      result: 'deny_system',
+      context: 'nearby_followup',
+      can_ask_again: canAskAgain !== false,
+    });
 
     Alert.alert(
       '无法获取位置',

@@ -34,6 +34,7 @@ import {
 } from '@/constants/cameraModes';
 import { useNativeCameraZoom } from '@/hooks/useNativeCameraZoom';
 import { analyzeImageStream } from '@/services/api';
+import { track } from '@/services/analytics';
 import { useSessionStore } from '@/store/session';
 import { colors, lightColors, radius, spacing, typography } from '@/theme';
 import type { RootStackParamList } from '@/types/navigation';
@@ -111,11 +112,15 @@ export function CameraScreen() {
     };
   }, [analyzing, isFoodScanMode]);
 
-  const runAnalyze = async (uri: string) => {
+  const runAnalyze = async (uri: string, source: 'camera' | 'gallery') => {
     if (API_MISCONFIGURED) {
       Alert.alert('未配置 API', formatApiError(new Error('misconfigured')));
       return;
     }
+
+    const mode = selectedAgent ?? 'auto';
+    const startedAt = Date.now();
+    track('analyze_start', { agent: mode, source });
 
     setPreviewUri(uri);
     setLastPhoto(uri);
@@ -150,6 +155,13 @@ export function CameraScreen() {
 
       if (!result) throw new Error('分析失败');
 
+      track('analyze_success', {
+        agent: result.agent_id,
+        source,
+        duration_ms: Date.now() - startedAt,
+        has_location: Boolean(coordinates),
+      });
+
       navigation.navigate('Insight', {
         memoryId: result.memory_id,
         imageUri: uri,
@@ -161,6 +173,12 @@ export function CameraScreen() {
           thinkingStepsRef.current.length > 0 ? thinkingStepsRef.current : undefined,
       });
     } catch (error) {
+      track('analyze_fail', {
+        agent: mode,
+        source,
+        duration_ms: Date.now() - startedAt,
+        error: error instanceof Error ? error.message : 'unknown',
+      });
       Alert.alert('分析失败', formatApiError(error));
     } finally {
       setAnalyzing(false);
@@ -196,7 +214,7 @@ export function CameraScreen() {
         cropRatio,
       );
 
-      await runAnalyze(uri);
+      await runAnalyze(uri, 'camera');
     } catch (error) {
       Alert.alert('拍照失败', error instanceof Error ? error.message : '请稍后重试');
     }
@@ -209,12 +227,17 @@ export function CameraScreen() {
       quality: 0.8,
     });
     if (!result.canceled && result.assets[0]?.uri) {
-      await runAnalyze(result.assets[0].uri);
+      await runAnalyze(result.assets[0].uri, 'gallery');
     }
   };
 
   const selectMode = (mode: CameraModeItem) => {
-    setSelectedAgent(cameraModeToAgent(mode.id));
+    const agent = cameraModeToAgent(mode.id);
+    setSelectedAgent(agent);
+    track('camera_mode_select', {
+      mode_id: mode.id,
+      agent: agent ?? 'auto',
+    });
   };
 
   const openDetail = () => {
