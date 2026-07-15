@@ -102,15 +102,27 @@ android/app/build/outputs/apk/release/app-release.apk
 
 > 当前本地 Release 包若使用 debug 签名，只适合内测安装。上架应用商店需配置正式 keystore。
 
+## 文档
+
+| 文档 | 说明 |
+|------|------|
+| [docs/vision-agent-产品文档.md](docs/vision-agent-产品文档.md) | 产品总览 |
+| [docs/food-scan.md](docs/food-scan.md) | 食识拍 |
+| [docs/埋点.md](docs/埋点.md) | PostHog 埋点（看数 + 事件） |
+| [docs/todo.md](docs/todo.md) | 积分等待办 |
+
+后端踩坑见：`../vision-agent-api/docs/dev-pitfalls.md`
+
 ## 项目结构
 
 ```
+docs/               # 产品 / 埋点 / 食识拍
 src/
-├── components/     # InsightCard, AgentPicker
-├── constants/      # API 配置
-├── screens/        # Camera, Insight, Memory
-├── services/       # API 客户端
-├── store/          # Zustand 状态
-├── theme/          # 设计 token
-└── types/          # TypeScript 类型
+├── components/
+├── constants/
+├── screens/
+├── services/
+├── store/
+├── theme/
+└── types/
 ```
