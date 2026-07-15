@@ -7,13 +7,15 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
+      "bundleIdentifier": "com.wubin1987107.visionagentmobile",
       "supportsTablet": true,
       "infoPlist": {
         "NSCameraUsageDescription": "Vision Agent 需要使用相机来理解您看到的内容。",
         "NSPhotoLibraryUsageDescription": "Vision Agent 需要访问相册以分析已有照片。",
         "NSLocationWhenInUseUsageDescription": "Vision Agent 需要位置信息来提供更准确的本地向导洞察。",
         "NSSpeechRecognitionUsageDescription": "Vision Agent 需要语音识别权限，以便将你说的话转为文字追问。",
-        "NSMicrophoneUsageDescription": "Vision Agent 需要使用麦克风进行语音输入。"
+        "NSMicrophoneUsageDescription": "Vision Agent 需要使用麦克风进行语音输入。",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
