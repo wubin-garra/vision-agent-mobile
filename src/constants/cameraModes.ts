@@ -16,7 +16,7 @@ export const cameraModes: CameraModeItem[] = [
     label: '自动',
     emoji: '✨',
     prompt: '对准任何画面，让 AI 自动选择最合适的解读视角。',
-    description: '自动模式会根据画面内容智能路由到本地向导、美食、穿搭、翻译等专家，无需手动切换。',
+    description: '自动模式会根据画面内容智能路由到本地向导、零食、穿搭、翻译等专家，无需手动切换。',
   },
   {
     id: 'stylist',
