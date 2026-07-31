@@ -81,48 +81,14 @@ function pointAt(path: PxPoint[], t: number): PxPoint {
   return path[idx]!;
 }
 
-/** 掌纹点包围盒，用于把文字推到掌区外侧 */
-function palmBounds(allPaths: PxPoint[][]) {
-  let minX = Infinity;
-  let maxX = -Infinity;
-  let minY = Infinity;
-  let maxY = -Infinity;
-  for (const path of allPaths) {
-    for (const p of path) {
-      minX = Math.min(minX, p.x);
-      maxX = Math.max(maxX, p.x);
-      minY = Math.min(minY, p.y);
-      maxY = Math.max(maxY, p.y);
-    }
-  }
-  if (!Number.isFinite(minX)) {
-    return { minX: 0, maxX: 0, minY: 0, maxY: 0 };
-  }
-  const padX = (maxX - minX) * 0.08;
-  const padY = (maxY - minY) * 0.06;
-  return {
-    minX: minX - padX,
-    maxX: maxX + padX,
-    minY: minY - padY,
-    maxY: maxY + padY,
-  };
-}
-
 function layoutOutsideLabels(
   items: Array<{ line: PalmLine; px: PxPoint[] }>,
   width: number,
   height: number,
 ): LabelLayout[] {
-  const bounds = palmBounds(items.map((i) => i.px));
-  const gutterLeft = Math.max(EDGE_PAD, Math.min(bounds.minX - LABEL_W - 6, EDGE_PAD));
-  const gutterRight = Math.min(
-    width - LABEL_W - EDGE_PAD,
-    Math.max(bounds.maxX + 6, width - LABEL_W - EDGE_PAD),
-  );
-
-  // 若掌几乎顶满宽度，仍强制贴左右边缘
-  const leftCol = Math.min(gutterLeft, EDGE_PAD + 2);
-  const rightCol = Math.max(gutterRight, width - LABEL_W - EDGE_PAD);
+  // 强制贴画面最左/最右，不依赖掌宽（掌顶满时也能把手外）
+  const leftCol = EDGE_PAD;
+  const rightCol = width - LABEL_W - EDGE_PAD;
 
   const layouts: LabelLayout[] = items.map(({ line, px }) => {
     const preset = LABEL_PRESET[line.id] ?? {
@@ -149,7 +115,6 @@ function layoutOutsideLabels(
     };
   });
 
-  // 同侧垂直避让
   for (const side of ['left', 'right'] as Side[]) {
     const group = layouts
       .filter((l) => l.side === side)
