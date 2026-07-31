@@ -25,6 +25,8 @@ import { FoodScanThinkingSheet } from '@/components/FoodScanThinkingSheet';
 import { FullImageViewer } from '@/components/FullImageViewer';
 import { ChipRow, InsightCard, InsightSection, TagList } from '@/components/InsightCard';
 import { InsightInputBar, type InsightInputBarHandle } from '@/components/InsightInputBar';
+import { PalmReaderInsightSections } from '@/components/PalmReaderInsightSections';
+import { PalmReaderThinkingSheet } from '@/components/PalmReaderThinkingSheet';
 import { SharePosterCard, type PosterData } from '@/components/SharePosterCard';
 import { AGENT_LABELS } from '@/constants/config';
 import { useKeyboardInset } from '@/hooks/useKeyboardInset';
@@ -125,6 +127,9 @@ export function InsightScreen({ navigation, route }: Props) {
   }, [memoryId]);
 
   const isFoodScan = agentId === 'food_scan';
+  const isPalmReader = agentId === 'palm_reader';
+  const isLightInsight = isFoodScan || isPalmReader;
+  const isStructuredFollowUp = isFoodScan || isPalmReader;
   const isFoodStyle =
     agentId === 'food_explorer' &&
     Boolean(
@@ -250,17 +255,25 @@ export function InsightScreen({ navigation, route }: Props) {
     { label: '实用信息', value: insight.context.practical },
   ].filter((block) => block.value);
 
+
   return (
-    <SafeAreaView style={[styles.root, isFoodScan && styles.rootLight]} edges={['top']}>
+    <SafeAreaView
+      style={[
+        styles.root,
+        isLightInsight && styles.rootLight,
+        isPalmReader && styles.rootPalm,
+      ]}
+      edges={['top']}
+    >
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={[styles.back, isFoodScan && styles.backLight]}>返回</Text>
+          <Text style={[styles.back, isLightInsight && styles.backLight]}>返回</Text>
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, isFoodScan && styles.headerTitleLight]}>
+        <Text style={[styles.headerTitle, isLightInsight && styles.headerTitleLight]}>
           {AGENT_LABELS[agentId] ?? '洞察'}
         </Text>
         <TouchableOpacity onPress={sharePoster}>
-          <Text style={[styles.share, isFoodScan && styles.shareLight]}>分享名片</Text>
+          <Text style={[styles.share, isLightInsight && styles.shareLight]}>分享名片</Text>
         </TouchableOpacity>
       </View>
 
@@ -269,7 +282,7 @@ export function InsightScreen({ navigation, route }: Props) {
           ref={scrollRef}
           style={styles.scroll}
           contentContainerStyle={[
-            isFoodScan ? styles.contentFoodScan : styles.content,
+            isLightInsight ? styles.contentFoodScan : styles.content,
             { paddingBottom: inputBarHeight + keyboardInset + spacing.lg },
           ]}
           showsVerticalScrollIndicator={false}
@@ -277,8 +290,10 @@ export function InsightScreen({ navigation, route }: Props) {
           keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
           onContentSizeChange={handleContentSizeChange}
         >
+        {!isPalmReader ? (
         <TouchableOpacity
           activeOpacity={0.92}
+          style={isFoodScan ? styles.imageWrap : undefined}
           onPress={() => {
             hapticLight();
             setFullImageVisible(true);
@@ -290,19 +305,22 @@ export function InsightScreen({ navigation, route }: Props) {
             resizeMode="cover"
           />
         </TouchableOpacity>
+        ) : null}
 
         <View ref={posterRef} collapsable={false} style={styles.posterHidden}>
           <SharePosterCard imageUri={imageUri} poster={posterData} />
         </View>
 
-        {isFoodScan ? (
-          <View style={styles.foodScanHero}>
+        {isLightInsight ? (
+          <View style={[styles.foodScanHero, isPalmReader && styles.palmHero]}>
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={() => setThinkingVisible(true)}
               style={styles.agentTagBtn}
             >
-              <Text style={styles.agentTag}>与食识拍一起看见 ›</Text>
+              <Text style={styles.agentTag}>
+                {isPalmReader ? '与手相师一起看见 ›' : '与食识拍一起看见 ›'}
+              </Text>
             </TouchableOpacity>
             <Text style={styles.foodScanTitle}>{insight.title}</Text>
             {insight.narrative ? (
@@ -320,12 +338,26 @@ export function InsightScreen({ navigation, route }: Props) {
             />
             <Text style={styles.disclaimerLight}>{insight.disclaimer}</Text>
           </View>
+        ) : isPalmReader ? (
+          <View style={styles.foodScanBody}>
+            <PalmReaderInsightSections
+              insight={insight}
+              imageUri={imageUri}
+              onSelectQuestion={prefillQuestion}
+              onScrollToBottom={scrollToBottom}
+              onOpenFullImage={() => {
+                hapticLight();
+                setFullImageVisible(true);
+              }}
+            />
+            <Text style={styles.disclaimerLight}>{insight.disclaimer}</Text>
+          </View>
         ) : (
         <InsightCard
           title={insight.title}
           category={insight.category}
           confidence={insight.confidence}
-          light={isFoodScan}
+          light={false}
         >
           {isFoodStyle ? (
             <FoodInsightSections insight={insight} onSelectQuestion={prefillQuestion} />
@@ -365,14 +397,16 @@ export function InsightScreen({ navigation, route }: Props) {
         </InsightCard>
         )}
 
-        <View style={styles.actions}>
-          <TouchableOpacity style={styles.actionBtn} onPress={speakInsight}>
-            <Text style={styles.actionBtnText}>{speaking ? '停止播报' : '语音播报'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionBtnPrimary} onPress={sharePoster}>
-            <Text style={styles.actionBtnPrimaryText}>生成分享名片</Text>
-          </TouchableOpacity>
-        </View>
+        {!isLightInsight ? (
+          <View style={styles.actions}>
+            <TouchableOpacity style={styles.actionBtn} onPress={speakInsight}>
+              <Text style={styles.actionBtnText}>{speaking ? '停止播报' : '语音播报'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionBtnPrimary} onPress={sharePoster}>
+              <Text style={styles.actionBtnPrimaryText}>生成分享名片</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         {historyLoading ? (
           <View style={styles.historyLoading}>
@@ -382,29 +416,32 @@ export function InsightScreen({ navigation, route }: Props) {
         ) : null}
 
         {qaList.length > 0 && (
-          <View style={[styles.qaBlock, isFoodScan && styles.qaBlockLight]}>
-            {!isFoodScan ? <Text style={styles.qaTitle}>追问记录</Text> : null}
+          <View style={[styles.qaBlock, isLightInsight && styles.qaBlockLight]}>
+            {!isLightInsight ? <Text style={styles.qaTitle}>追问记录</Text> : null}
             {qaList.map((item, index) => (
               <View
                 key={`${item.question}-${index}`}
                 style={[
                   styles.qaItem,
-                  isFoodScan && styles.qaItemLight,
+                  isLightInsight && styles.qaItemLight,
                   index === qaList.length - 1 && styles.qaItemLast,
                 ]}
               >
-                <View style={[styles.userBubble, isFoodScan && styles.userBubbleLight]}>
-                  <Text style={[styles.userBubbleText, isFoodScan && styles.userBubbleTextLight]}>
+                <View style={[styles.userBubble, isLightInsight && styles.userBubbleLight]}>
+                  <Text style={[styles.userBubbleText, isLightInsight && styles.userBubbleTextLight]}>
                     {item.question}
                   </Text>
                 </View>
-                {isFoodScan && item.structuredAnswer ? (
+                {isStructuredFollowUp && item.structuredAnswer ? (
                   <FoodScanFollowUpAnswer
                     answer={item.structuredAnswer}
                     onSelectQuestion={prefillQuestion}
+                    agentTag={
+                      isPalmReader ? '与手相师一起看见 ›' : '与食识拍一起看见 ›'
+                    }
                   />
                 ) : (
-                  <Text style={[styles.qaAnswer, isFoodScan && styles.qaAnswerLight]}>
+                  <Text style={[styles.qaAnswer, isLightInsight && styles.qaAnswerLight]}>
                     {item.answer}
                   </Text>
                 )}
@@ -413,7 +450,7 @@ export function InsightScreen({ navigation, route }: Props) {
           </View>
         )}
 
-        {!hasGroupedChips && !isFoodScan && (
+        {!hasGroupedChips && !isLightInsight && (
           <View style={styles.followupBlock}>
             <Text style={styles.qaTitle}>继续探索</Text>
             <ChipRow items={chips} onPress={prefillQuestion} />
@@ -422,14 +459,18 @@ export function InsightScreen({ navigation, route }: Props) {
         </ScrollView>
 
         <View
-          style={[styles.inputDock, { bottom: keyboardInset }, isFoodScan && styles.inputDockLight]}
+          style={[
+            styles.inputDock,
+            { bottom: keyboardInset },
+            isLightInsight && styles.inputDockLight,
+            isPalmReader && styles.inputDockPalm,
+          ]}
           onLayout={(event) => setInputBarHeight(event.nativeEvent.layout.height)}
         >
           <InsightInputBar
             ref={inputBarRef}
             value={customQuestion}
             onChangeText={(text) => {
-              // chip 预填不经此回调；用户键入/语音后视为 input
               followupSourceRef.current = 'input';
               setCustomQuestion(text);
             }}
@@ -437,12 +478,22 @@ export function InsightScreen({ navigation, route }: Props) {
             onFocus={handleInputFocus}
             loading={loading}
             keyboardInset={keyboardInset}
+            placeholder={isPalmReader ? '有什么想问的尽管说…' : undefined}
           />
         </View>
       </View>
 
       {isFoodScan ? (
         <FoodScanThinkingSheet
+          visible={thinkingVisible}
+          imageUri={imageUri}
+          completedSteps={thinkingSteps}
+          onClose={() => setThinkingVisible(false)}
+        />
+      ) : null}
+
+      {isPalmReader ? (
+        <PalmReaderThinkingSheet
           visible={thinkingVisible}
           imageUri={imageUri}
           completedSteps={thinkingSteps}
@@ -462,6 +513,7 @@ export function InsightScreen({ navigation, route }: Props) {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   rootLight: { backgroundColor: lightColors.bg },
+  rootPalm: { backgroundColor: lightColors.surface },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -488,6 +540,9 @@ const styles = StyleSheet.create({
   inputDockLight: {
     backgroundColor: lightColors.bg,
   },
+  inputDockPalm: {
+    backgroundColor: lightColors.surface,
+  },
   image: {
     width: '100%',
     height: 260,
@@ -499,9 +554,18 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     marginBottom: spacing.sm,
   },
+  imageWrap: {
+    position: 'relative',
+    overflow: 'hidden',
+    borderRadius: radius.lg,
+  },
   foodScanHero: {
     gap: spacing.sm,
     marginBottom: spacing.xs,
+  },
+  palmHero: {
+    paddingTop: spacing.sm,
+    marginBottom: spacing.sm,
   },
   agentTagBtn: {
     alignSelf: 'flex-start',

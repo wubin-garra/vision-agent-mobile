@@ -18,13 +18,19 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnalysisThinkingOverlay } from '@/components/AnalysisThinkingOverlay';
+import { BirthdayCollectSheet } from '@/components/BirthdayCollectSheet';
 import { CreditsBadge } from '@/components/CreditsBadge';
-import { API_BASE_URL, API_MISCONFIGURED, formatApiError } from '@/constants/config';
+import { API_BASE_URL, API_MISCONFIGURED, AGENT_LABELS, formatApiError } from '@/constants/config';
 import { AgentDetailSheet } from '@/components/AgentDetailSheet';
 import { AgentModeCarousel } from '@/components/AgentModeCarousel';
 import { CameraScanFrame } from '@/components/CameraScanFrame';
+import { PalmCameraGuide } from '@/components/PalmCameraGuide';
 import { ZoomSelector } from '@/components/ZoomSelector';
 import { FOOD_SCAN_THINKING_STEP_DURATIONS_MS, FOOD_SCAN_THINKING_STEPS } from '@/constants/foodScanThinking';
+import {
+  PALM_READER_THINKING_STEP_DURATIONS_MS,
+  PALM_READER_THINKING_STEPS,
+} from '@/constants/palmReaderThinking';
 import {
   agentToCameraMode,
   cameraModeToAgent,
@@ -71,21 +77,33 @@ export function CameraScreen() {
   const [lastPhoto, setLastPhoto] = useState<string | null>(null);
   const [showPrompt, setShowPrompt] = useState(true);
   const [detailVisible, setDetailVisible] = useState(false);
-  const { selectedAgent, setSelectedAgent } = useSessionStore();
+  const [birthdaySheetVisible, setBirthdaySheetVisible] = useState(false);
+  const [pendingAnalyze, setPendingAnalyze] = useState<{
+    uri: string;
+    source: 'camera' | 'gallery';
+  } | null>(null);
+  const { selectedAgent, setSelectedAgent, birthday, setBirthday } = useSessionStore();
   const activeMode = findCameraMode(agentToCameraMode(selectedAgent));
   const isFoodScanMode = selectedAgent === 'food_scan';
+  const isPalmReaderMode = selectedAgent === 'palm_reader';
+  const isRichThinkingMode = isFoodScanMode || isPalmReaderMode;
 
   useEffect(() => {
-    if (!analyzing || !isFoodScanMode) return;
+    if (!analyzing || !isRichThinkingMode) return;
+
+    const steps = isPalmReaderMode ? PALM_READER_THINKING_STEPS : FOOD_SCAN_THINKING_STEPS;
+    const durations = isPalmReaderMode
+      ? PALM_READER_THINKING_STEP_DURATIONS_MS
+      : FOOD_SCAN_THINKING_STEP_DURATIONS_MS;
 
     let stepIndex = 0;
     let cancelled = false;
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
     const showStep = (index: number) => {
-      const step = FOOD_SCAN_THINKING_STEPS[index];
+      const step = steps[index];
       setThinkingStep(step);
-      if (!thinkingStepsRef.current.includes(step)) {
+      if (step && !thinkingStepsRef.current.includes(step)) {
         thinkingStepsRef.current = [...thinkingStepsRef.current, step];
         setThinkingSteps(thinkingStepsRef.current);
       }
@@ -95,11 +113,11 @@ export function CameraScreen() {
       if (cancelled) return;
       showStep(stepIndex);
 
-      const duration = FOOD_SCAN_THINKING_STEP_DURATIONS_MS[stepIndex] ?? 0;
-      if (duration <= 0 || stepIndex >= FOOD_SCAN_THINKING_STEPS.length - 1) return;
+      const duration = durations[stepIndex] ?? 0;
+      if (duration <= 0 || stepIndex >= steps.length - 1) return;
 
       timeoutId = setTimeout(() => {
-        stepIndex = Math.min(stepIndex + 1, FOOD_SCAN_THINKING_STEPS.length - 1);
+        stepIndex = Math.min(stepIndex + 1, steps.length - 1);
         scheduleNext();
       }, duration);
     };
@@ -110,9 +128,13 @@ export function CameraScreen() {
       cancelled = true;
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [analyzing, isFoodScanMode]);
+  }, [analyzing, isPalmReaderMode, isRichThinkingMode]);
 
-  const runAnalyze = async (uri: string, source: 'camera' | 'gallery') => {
+  const runAnalyze = async (
+    uri: string,
+    source: 'camera' | 'gallery',
+    birthdayOverride?: string | null,
+  ) => {
     if (API_MISCONFIGURED) {
       Alert.alert('未配置 API', formatApiError(new Error('misconfigured')));
       return;
@@ -125,7 +147,7 @@ export function CameraScreen() {
     setPreviewUri(uri);
     setLastPhoto(uri);
     setAnalyzing(true);
-    setStatus('正在理解画面…');
+    setStatus(isPalmReaderMode ? '正在解读掌纹…' : '正在理解画面…');
     setAnalyzeStage('captioning');
     setThinkingStep(undefined);
     thinkingStepsRef.current = [];
@@ -138,11 +160,13 @@ export function CameraScreen() {
           onStatus: (stage) => {
             setAnalyzeStage(stage);
             if (stage === 'routing') setStatus('正在选择智能体…');
-            if (stage === 'analyzing') setStatus('正在生成营养报告…');
+            if (stage === 'analyzing') {
+              setStatus(isPalmReaderMode ? '正在生成手相洞察…' : '正在生成营养报告…');
+            }
             if (stage === 'captioning') setStatus('正在分析图像…');
           },
           onThinking: () => {
-            // 步骤节奏由客户端 FOOD_SCAN_THINKING_STEP_DURATIONS_MS 控制
+            // 步骤节奏由客户端 THINKING_STEP_DURATIONS_MS 控制
           },
           onPartial: (partial) => setStatus(`${partial.title} · ${partial.category}`),
         },
@@ -150,16 +174,32 @@ export function CameraScreen() {
           agentOverride: selectedAgent ?? undefined,
           latitude: coordinates?.latitude,
           longitude: coordinates?.longitude,
+          birthday: birthdayOverride ?? undefined,
         },
       );
 
       if (!result) throw new Error('分析失败');
 
+      // 专项镜头被服务端静默忽略时（旧版 API 未识别 agent_override）会落到自动路由
+      if (mode !== 'auto' && result.agent_id !== mode) {
+        track('analyze_agent_mismatch', {
+          requested: mode,
+          actual: result.agent_id,
+          source,
+        });
+        Alert.alert(
+          '镜头未生效',
+          `你选择的是「${AGENT_LABELS[mode] ?? mode}」，但当前后端返回了「${AGENT_LABELS[result.agent_id] ?? result.agent_id}」。\n\n多半是线上 API 尚未部署该镜头。请更新 vision-agent-api 后重试，或将 EXPO_PUBLIC_API_URL 指向本地已更新的后端。`,
+        );
+      }
+
       track('analyze_success', {
         agent: result.agent_id,
+        requested_agent: mode,
         source,
         duration_ms: Date.now() - startedAt,
         has_location: Boolean(coordinates),
+        has_birthday: Boolean(birthdayOverride),
       });
 
       navigation.navigate('Insight', {
@@ -188,11 +228,23 @@ export function CameraScreen() {
       thinkingStepsRef.current = [];
       setThinkingSteps([]);
       setPreviewUri(null);
+      setPendingAnalyze(null);
     }
   };
 
+  const beginAnalyze = async (uri: string, source: 'camera' | 'gallery') => {
+    if (selectedAgent === 'palm_reader') {
+      setPreviewUri(uri);
+      setLastPhoto(uri);
+      setPendingAnalyze({ uri, source });
+      setBirthdaySheetVisible(true);
+      return;
+    }
+    await runAnalyze(uri, source);
+  };
+
   const capturePhoto = async () => {
-    if (!cameraRef.current || analyzing) return;
+    if (!cameraRef.current || analyzing || birthdaySheetVisible) return;
     hapticMedium();
     try {
       const { zoom: captureZoom } = await prepareForCapture();
@@ -214,7 +266,7 @@ export function CameraScreen() {
         cropRatio,
       );
 
-      await runAnalyze(uri, 'camera');
+      await beginAnalyze(uri, 'camera');
     } catch (error) {
       Alert.alert('拍照失败', error instanceof Error ? error.message : '请稍后重试');
     }
@@ -227,7 +279,7 @@ export function CameraScreen() {
       quality: 0.8,
     });
     if (!result.canceled && result.assets[0]?.uri) {
-      await runAnalyze(result.assets[0].uri, 'gallery');
+      await beginAnalyze(result.assets[0].uri, 'gallery');
     }
   };
 
@@ -288,7 +340,7 @@ export function CameraScreen() {
 
   return (
     <View style={styles.root}>
-      {!analyzing ? (
+      {!analyzing && !birthdaySheetVisible ? (
         <GestureDetector gesture={pinchGesture}>
           <CameraView
             ref={cameraRef}
@@ -310,8 +362,10 @@ export function CameraScreen() {
         <View style={styles.frozenPreview} />
       )}
 
-      {/* Chance 风格四角扫描框 */}
-      <CameraScanFrame />
+      {/* 看手相师：掌心轮廓引导；其他模式：Chance 四角扫描框 */}
+      {!analyzing && !birthdaySheetVisible ? (
+        isPalmReaderMode ? <PalmCameraGuide /> : <CameraScanFrame />
+      ) : null}
 
       <SafeAreaView style={styles.overlay} edges={['top']}>
         {/* Top bar */}
@@ -438,11 +492,30 @@ export function CameraScreen() {
         onTry={() => setDetailVisible(false)}
       />
 
-      {analyzing && isFoodScanMode ? (
+      <BirthdayCollectSheet
+        visible={birthdaySheetVisible}
+        initialBirthday={birthday}
+        onConfirm={(value) => {
+          setBirthday(value);
+          setBirthdaySheetVisible(false);
+          if (pendingAnalyze) {
+            void runAnalyze(pendingAnalyze.uri, pendingAnalyze.source, value);
+          }
+        }}
+        onSkip={() => {
+          setBirthdaySheetVisible(false);
+          if (pendingAnalyze) {
+            void runAnalyze(pendingAnalyze.uri, pendingAnalyze.source, null);
+          }
+        }}
+      />
+
+      {analyzing && isRichThinkingMode ? (
         <AnalysisThinkingOverlay
           imageUri={previewUri}
           stage={analyzeStage}
           thinkingStep={thinkingStep}
+          variant={isPalmReaderMode ? 'palm_reader' : 'food_scan'}
         />
       ) : null}
     </View>

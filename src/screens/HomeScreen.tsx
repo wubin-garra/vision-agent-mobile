@@ -28,7 +28,7 @@ type Nav = CompositeNavigationProp<
 
 export function HomeScreen() {
   const navigation = useNavigation<Nav>();
-  const { memories, setMemories } = useSessionStore();
+  const { memories, setMemories, setSelectedAgent } = useSessionStore();
   const [promptIndex] = useState(() => Math.floor(Math.random() * featuredPrompts.length));
 
   useFocusEffect(
@@ -57,7 +57,10 @@ export function HomeScreen() {
     });
   };
 
-  const goCamera = () => {
+  const goCamera = (agentId?: MemoryItem['agent_id']) => {
+    if (agentId) {
+      setSelectedAgent(agentId);
+    }
     navigation.navigate('Camera');
   };
 
@@ -77,7 +80,7 @@ export function HomeScreen() {
             <Text style={styles.heroSub}>
               对准世界，一键理解。{'\n'}Vision Agent 是你的好奇心镜头。
             </Text>
-            <TouchableOpacity style={styles.heroBtn} onPress={goCamera}>
+            <TouchableOpacity style={styles.heroBtn} onPress={() => goCamera()}>
               <Text style={styles.heroBtnText}>✦ 开始拍照</Text>
             </TouchableOpacity>
           </View>
@@ -87,13 +90,13 @@ export function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>换个视角</Text>
-            <TouchableOpacity onPress={goCamera}>
+            <TouchableOpacity onPress={() => goCamera()}>
               <Text style={styles.sectionLink}>探索更多 ›</Text>
             </TouchableOpacity>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.perspectiveRow}>
             {perspectives.map((item) => (
-              <TouchableOpacity key={item.id} style={styles.perspectiveItem} onPress={goCamera}>
+              <TouchableOpacity key={item.id} style={styles.perspectiveItem} onPress={() => goCamera(item.id)}>
                 <View style={styles.perspectiveCircle}>
                   <Text style={styles.perspectiveEmoji}>{item.emoji}</Text>
                   {item.isNew ? (
@@ -111,7 +114,7 @@ export function HomeScreen() {
         </View>
 
         {/* 拍照提示卡 */}
-        <TouchableOpacity style={styles.promptCard} onPress={goCamera} activeOpacity={0.9}>
+        <TouchableOpacity style={styles.promptCard} onPress={() => goCamera()} activeOpacity={0.9}>
           <View style={styles.promptGrid}>
             {[0, 1, 2, 3].map((i) => (
               <View key={i} style={[styles.promptGridCell, i > 1 && styles.promptGridBlur]} />

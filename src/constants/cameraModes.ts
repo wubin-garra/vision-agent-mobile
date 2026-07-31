@@ -33,6 +33,13 @@ export const cameraModes: CameraModeItem[] = [
     description: '识别盘中食材，估算热量与三大营养素，提供饮食建议与过敏原提示。',
   },
   {
+    id: 'palm_reader',
+    label: '看手相师',
+    emoji: '🤚',
+    prompt: '掌心朝上对准轮廓，让纹路清晰可见。',
+    description: '描摹感情线、智慧线、生命线与事业线，可选生日结合星座，给出温柔的自我觉察解读。',
+  },
+  {
     id: 'food_explorer',
     label: '美食探索',
     emoji: '🍜',

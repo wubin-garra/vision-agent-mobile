@@ -5,6 +5,7 @@ export type AgentId =
   | 'stylist'
   | 'food_explorer'
   | 'food_scan'
+  | 'palm_reader'
   | 'text_reader'
   | 'general_curiosity';
 
@@ -62,6 +63,43 @@ export interface NutritionTip {
   body: string;
 }
 
+export type PalmLineId = 'heart' | 'head' | 'life' | 'career';
+
+export interface PalmPoint {
+  x: number;
+  y: number;
+}
+
+export interface PalmLine {
+  id: PalmLineId;
+  name: string;
+  color: string;
+  highlight: string;
+  description: string;
+  path?: PalmPoint[];
+}
+
+export interface PersonalitySlider {
+  low_label: string;
+  high_label: string;
+  value: number;
+}
+
+export interface PalmSummaryTrait {
+  label: string;
+  value: string;
+}
+
+export interface PalmReading {
+  birthday?: string | null;
+  zodiac?: string | null;
+  insight_quote?: string | null;
+  summary_traits?: PalmSummaryTrait[];
+  palm_lines?: PalmLine[];
+  personality_spectrum?: PersonalitySlider[];
+  compatibility_teaser?: string | null;
+}
+
 export interface StructuredInsight {
   title: string;
   category: string;
@@ -83,6 +121,7 @@ export interface StructuredInsight {
   allergens?: AllergenItem[];
   nutrition_tips?: NutritionTip[];
   diet_summary?: string | null;
+  palm_reading?: PalmReading | null;
 }
 
 export interface AnalyzeResponse {

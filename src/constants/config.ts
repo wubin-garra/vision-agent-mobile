@@ -76,6 +76,7 @@ export const AGENT_LABELS: Record<string, string> = {
   stylist: '造型师',
   food_explorer: '美食探索',
   food_scan: '食识拍',
+  palm_reader: '看手相师',
   text_reader: '文字解读',
   general_curiosity: '好奇心',
 };

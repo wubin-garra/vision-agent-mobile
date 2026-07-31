@@ -10,6 +10,7 @@ import type {
 type Props = {
   answer: StructuredFollowUpAnswer;
   onSelectQuestion?: (question: string) => void;
+  agentTag?: string;
 };
 
 /** 饱腹感 / 热量密度等对比滑条 */
@@ -102,10 +103,14 @@ function TipsBlock({ section }: { section: FollowUpSection }) {
  * 食识拍 Chance 风格追问回答。
  * 结构：品牌行 → 总结 → 分段正文 → 评估卡 → 优化建议 → 指标卡 → 备注 → 追问芯片
  */
-export function FoodScanFollowUpAnswer({ answer, onSelectQuestion }: Props) {
+export function FoodScanFollowUpAnswer({
+  answer,
+  onSelectQuestion,
+  agentTag = '与食识拍一起看见 ›',
+}: Props) {
   return (
     <View style={styles.wrap}>
-      <Text style={styles.agentTag}>与食识拍一起看见 ›</Text>
+      <Text style={styles.agentTag}>{agentTag}</Text>
 
       <View style={styles.summaryCard}>
         <Text style={styles.summary}>{answer.summary}</Text>

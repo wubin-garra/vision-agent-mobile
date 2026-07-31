@@ -40,6 +40,7 @@ function buildAnalyzeParameters(options?: {
   agentOverride?: AgentId;
   latitude?: number;
   longitude?: number;
+  birthday?: string;
 }): Record<string, string> {
   const parameters: Record<string, string> = {
     locale: options?.locale ?? 'zh-CN',
@@ -53,6 +54,9 @@ function buildAnalyzeParameters(options?: {
   if (options?.longitude != null) {
     parameters.longitude = String(options.longitude);
   }
+  if (options?.birthday) {
+    parameters.birthday = options.birthday;
+  }
   return parameters;
 }
 
@@ -63,6 +67,7 @@ export async function analyzeImage(
     agentOverride?: AgentId;
     latitude?: number;
     longitude?: number;
+    birthday?: string;
   },
 ): Promise<AnalyzeResponse> {
   const uploadUri = await prepareImageForUpload(imageUri);
@@ -99,6 +104,7 @@ export async function analyzeImageStream(
     agentOverride?: AgentId;
     latitude?: number;
     longitude?: number;
+    birthday?: string;
   },
 ): Promise<AnalyzeResponse | null> {
   try {

@@ -18,6 +18,7 @@ const DEFAULT_AGENTS: AgentId[] = [
   'stylist',
   'food_explorer',
   'food_scan',
+  'palm_reader',
   'text_reader',
 ];
 

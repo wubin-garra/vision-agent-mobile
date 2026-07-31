@@ -15,12 +15,22 @@ import {
   FOOD_SCAN_STEP_DETAILS,
   FOOD_SCAN_THINKING_STEPS,
 } from '@/constants/foodScanThinking';
+import {
+  PALM_READER_INPUT_HINTS,
+  PALM_READER_STAGE_LABELS,
+  PALM_READER_STAGE_PHRASES,
+  PALM_READER_STEP_DETAILS,
+  PALM_READER_THINKING_STEPS,
+} from '@/constants/palmReaderThinking';
 import { lightColors, radius, spacing, typography } from '@/theme';
+
+type ThinkingVariant = 'food_scan' | 'palm_reader';
 
 type Props = {
   imageUri: string | null;
   stage?: string;
   thinkingStep?: string;
+  variant?: ThinkingVariant;
 };
 
 function useRotatingPhrase(phrases: string[], intervalMs = 2200) {
@@ -37,11 +47,35 @@ function useRotatingPhrase(phrases: string[], intervalMs = 2200) {
   return phrases[index] ?? phrases[0] ?? '';
 }
 
-export function AnalysisThinkingOverlay({ imageUri, stage, thinkingStep }: Props) {
+export function AnalysisThinkingOverlay({
+  imageUri,
+  stage,
+  thinkingStep,
+  variant = 'food_scan',
+}: Props) {
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
   const lastStepRef = useRef<string | undefined>(undefined);
   const scanAnim = useRef(new Animated.Value(0.08)).current;
   const pulseAnim = useRef(new Animated.Value(0.4)).current;
+
+  const config =
+    variant === 'palm_reader'
+      ? {
+          steps: PALM_READER_THINKING_STEPS,
+          stagePhrases: PALM_READER_STAGE_PHRASES,
+          stepDetails: PALM_READER_STEP_DETAILS,
+          inputHints: PALM_READER_INPUT_HINTS,
+          stageLabels: PALM_READER_STAGE_LABELS,
+          fallbackTitle: '看手相师思考中',
+        }
+      : {
+          steps: FOOD_SCAN_THINKING_STEPS,
+          stagePhrases: FOOD_SCAN_STAGE_PHRASES,
+          stepDetails: FOOD_SCAN_STEP_DETAILS,
+          inputHints: FOOD_SCAN_INPUT_HINTS,
+          stageLabels: FOOD_SCAN_STAGE_LABELS,
+          fallbackTitle: '食识拍思考中',
+        };
 
   useEffect(() => {
     setCompletedSteps([]);
@@ -99,23 +133,23 @@ export function AnalysisThinkingOverlay({ imageUri, stage, thinkingStep }: Props
   }, [pulseAnim]);
 
   const stagePhrases =
-    FOOD_SCAN_STAGE_PHRASES[stage ?? ''] ?? FOOD_SCAN_STAGE_PHRASES.default;
+    config.stagePhrases[stage ?? ''] ?? config.stagePhrases.default;
   const stagePhrase = useRotatingPhrase(stagePhrases, 2400);
 
   const stepDetails = thinkingStep
-    ? FOOD_SCAN_STEP_DETAILS[thinkingStep] ?? []
+    ? config.stepDetails[thinkingStep] ?? []
     : stagePhrases;
   const stepDetail = useRotatingPhrase(stepDetails, 1800);
 
-  const inputHint = useRotatingPhrase(FOOD_SCAN_INPUT_HINTS, 2600);
+  const inputHint = useRotatingPhrase(config.inputHints, 2600);
 
   const displaySteps = thinkingStep
-    ? FOOD_SCAN_THINKING_STEPS.filter(
+    ? config.steps.filter(
         (step) => completedSteps.includes(step) || step === thinkingStep,
       )
-    : FOOD_SCAN_THINKING_STEPS.slice(0, 1);
+    : config.steps.slice(0, 1);
 
-  const stageTitle = FOOD_SCAN_STAGE_LABELS[stage ?? ''] ?? '食识拍思考中';
+  const stageTitle = config.stageLabels[stage ?? ''] ?? config.fallbackTitle;
 
   const scanLeft = scanAnim.interpolate({
     inputRange: [0, 1],
