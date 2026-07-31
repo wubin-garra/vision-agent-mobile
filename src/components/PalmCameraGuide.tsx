@@ -179,7 +179,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingBottom: 120,
   },
   guide: {
     width: GUIDE_W,

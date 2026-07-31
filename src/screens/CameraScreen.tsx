@@ -15,7 +15,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnalysisThinkingOverlay } from '@/components/AnalysisThinkingOverlay';
 import { BirthdayCollectSheet } from '@/components/BirthdayCollectSheet';
@@ -45,14 +45,16 @@ import { useSessionStore } from '@/store/session';
 import { colors, lightColors, radius, spacing, typography } from '@/theme';
 import type { RootStackParamList } from '@/types/navigation';
 import { getCurrentCoordinates } from '@/utils/location';
-import { cropCaptureToZoom, getCaptureCropRatio } from '@/utils/captureCrop';
+import { cropCaptureToViewport, getCaptureCropRatio } from '@/utils/captureCrop';
 import { hapticLight, hapticMedium } from '@/utils/haptics';
 
 type StackNav = NativeStackNavigationProp<RootStackParamList>;
 
 export function CameraScreen() {
   const navigation = useNavigation<StackNav>();
+  const insets = useSafeAreaInsets();
   const cameraRef = useRef<CameraView>(null);
+  const previewSizeRef = useRef({ width: 0, height: 0 });
   const [permission, requestPermission] = useCameraPermissions();
   const [analyzing, setAnalyzing] = useState(false);
   const [status, setStatus] = useState('');
@@ -259,10 +261,14 @@ export function CameraScreen() {
       if (!photo?.uri) return;
 
       const cropRatio = facing === 'back' ? getCaptureCropRatio(captureZoom) : 1;
-      const uri = await cropCaptureToZoom(
+      const { width: viewW, height: viewH } = previewSizeRef.current;
+      const viewAspect = viewW > 0 && viewH > 0 ? viewW / viewH : 0;
+      // 按取景视口裁切：底部控制栏不再遮挡「所见」，成片与预览一致
+      const uri = await cropCaptureToViewport(
         photo.uri,
         photo.width ?? 0,
         photo.height ?? 0,
+        viewAspect,
         cropRatio,
       );
 
@@ -340,150 +346,155 @@ export function CameraScreen() {
 
   return (
     <View style={styles.root}>
-      {!analyzing && !birthdaySheetVisible ? (
-        <GestureDetector gesture={pinchGesture}>
-          <CameraView
-            ref={cameraRef}
-            style={StyleSheet.absoluteFill}
-            facing={facing}
-            zoom={zoom}
-            selectedLens={selectedLens}
-            onCameraReady={handleCameraReady}
-            onAvailableLensesChanged={onAvailableLensesChanged}
+      {/* 取景区仅占控制栏上方 — Chance 式所见即所拍 */}
+      <View
+        style={styles.previewViewport}
+        onLayout={(event) => {
+          const { width, height } = event.nativeEvent.layout;
+          previewSizeRef.current = { width, height };
+        }}
+      >
+        {!analyzing && !birthdaySheetVisible ? (
+          <GestureDetector gesture={pinchGesture}>
+            <CameraView
+              ref={cameraRef}
+              style={StyleSheet.absoluteFill}
+              facing={facing}
+              zoom={zoom}
+              selectedLens={selectedLens}
+              onCameraReady={handleCameraReady}
+              onAvailableLensesChanged={onAvailableLensesChanged}
+            />
+          </GestureDetector>
+        ) : previewUri ? (
+          <Image
+            source={{ uri: previewUri }}
+            style={styles.frozenPreview}
+            resizeMode="cover"
           />
-        </GestureDetector>
-      ) : previewUri ? (
-        <Image
-          source={{ uri: previewUri }}
-          style={styles.frozenPreview}
-          resizeMode="cover"
-        />
-      ) : (
-        <View style={styles.frozenPreview} />
-      )}
-
-      {/* 看手相师：掌心轮廓引导；其他模式：Chance 四角扫描框 */}
-      {!analyzing && !birthdaySheetVisible ? (
-        isPalmReaderMode ? <PalmCameraGuide /> : <CameraScanFrame />
-      ) : null}
-
-      <SafeAreaView style={styles.overlay} edges={['top']}>
-        {/* Top bar */}
-        <View style={styles.topBar}>
-          <CreditsBadge variant="dark" />
-          <View style={styles.topActions}>
-            <View style={styles.liveBadge}>
-              <Text style={styles.liveText}>LIVE</Text>
-            </View>
-            {__DEV__ ? (
-              <Text style={styles.apiHint} numberOfLines={1}>
-                {API_BASE_URL.replace(/^https?:\/\//, '')}
-              </Text>
-            ) : null}
-          </View>
-        </View>
-
-        {/* 模式说明 — 顶部居中 */}
-        {showPrompt && (
-          <View style={styles.promptBannerWrap}>
-            <View style={styles.promptBanner}>
-              <Text style={styles.promptBannerText} numberOfLines={2}>
-                {activeMode.prompt}
-              </Text>
-              <TouchableOpacity
-                style={styles.promptClose}
-                onPress={() => {
-                  hapticLight();
-                  setShowPrompt(false);
-                }}
-                hitSlop={8}
-              >
-                <Text style={styles.promptCloseText}>×</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+        ) : (
+          <View style={styles.frozenPreview} />
         )}
 
-        <View style={styles.spacer} />
+        {!analyzing && !birthdaySheetVisible ? (
+          isPalmReaderMode ? <PalmCameraGuide /> : <CameraScanFrame />
+        ) : null}
 
-        {/* Zoom — 浮在取景器上，Chance 同款 */}
-        <ZoomSelector
-          presets={zoomPresets}
-          onSelect={applyPreset}
-          disabled={analyzing}
-        />
-
-        {/* 底部控制区 — 背景延伸至 Tab 栏，无缝隙 */}
-        <View style={styles.bottomPanel}>
-          <View style={styles.controlBar}>
-            <TouchableOpacity onPress={pickFromGallery} disabled={analyzing}>
-              {lastPhoto ? (
-                <Image source={{ uri: lastPhoto }} style={styles.galleryThumb} />
-              ) : (
-                <View style={styles.galleryPlaceholder}>
-                  <Text style={styles.galleryPlaceholderText}>图</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.modePill, analyzing && styles.modePillDisabled]}
-              onPress={openDetail}
-              disabled={analyzing}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.modePillIcon}>🔖</Text>
-              <Text style={styles.modePillText} numberOfLines={1}>
-                {activeMode.label}
-              </Text>
-              <View style={styles.modeInfoBtn}>
-                <Text style={styles.modeInfoText}>i</Text>
+        <SafeAreaView style={styles.previewOverlay} edges={['top']}>
+          <View style={styles.topBar}>
+            <CreditsBadge variant="dark" />
+            <View style={styles.topActions}>
+              <View style={styles.liveBadge}>
+                <Text style={styles.liveText}>LIVE</Text>
               </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.flipBtn}
-              onPress={() => {
-                hapticLight();
-                setFacing((current) => (current === 'back' ? 'front' : 'back'));
-                resetZoom();
-              }}
-              disabled={analyzing}
-            >
-              <Text style={styles.flipIcon}>↻</Text>
-            </TouchableOpacity>
+              {__DEV__ ? (
+                <Text style={styles.apiHint} numberOfLines={1}>
+                  {API_BASE_URL.replace(/^https?:\/\//, '')}
+                </Text>
+              ) : null}
+            </View>
           </View>
 
-          {analyzing && status ? (
-            <View style={styles.statusBar}>
-              <Text style={styles.statusText}>{status}</Text>
+          {showPrompt && !isPalmReaderMode ? (
+            <View style={styles.promptBannerWrap}>
+              <View style={styles.promptBanner}>
+                <Text style={styles.promptBannerText} numberOfLines={2}>
+                  {activeMode.prompt}
+                </Text>
+                <TouchableOpacity
+                  style={styles.promptClose}
+                  onPress={() => {
+                    hapticLight();
+                    setShowPrompt(false);
+                  }}
+                  hitSlop={8}
+                >
+                  <Text style={styles.promptCloseText}>×</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ) : null}
 
-          <AgentModeCarousel
-            modes={cameraModes}
-            selectedId={activeMode.id}
-            onSelect={selectMode}
+          <View style={styles.spacer} />
+
+          <ZoomSelector
+            presets={zoomPresets}
+            onSelect={applyPreset}
             disabled={analyzing}
           />
+        </SafeAreaView>
+      </View>
 
-          <View style={styles.captureRow}>
-            <Pressable
-              style={[styles.shutterOuter, analyzing && styles.shutterDisabled]}
-              onPress={capturePhoto}
-              disabled={analyzing}
-            >
-              <View style={styles.shutterInner}>
-                {analyzing ? (
-                  <ActivityIndicator color={colors.accent} size="small" />
-                ) : (
-                  <Text style={styles.shutterIcon}>✦</Text>
-                )}
+      {/* 控制栏在取景区外，不再遮挡镜头画面 */}
+      <View style={[styles.bottomPanel, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}>
+        <View style={styles.controlBar}>
+          <TouchableOpacity onPress={pickFromGallery} disabled={analyzing}>
+            {lastPhoto ? (
+              <Image source={{ uri: lastPhoto }} style={styles.galleryThumb} />
+            ) : (
+              <View style={styles.galleryPlaceholder}>
+                <Text style={styles.galleryPlaceholderText}>图</Text>
               </View>
-            </Pressable>
-          </View>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.modePill, analyzing && styles.modePillDisabled]}
+            onPress={openDetail}
+            disabled={analyzing}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.modePillIcon}>🔖</Text>
+            <Text style={styles.modePillText} numberOfLines={1}>
+              {activeMode.label}
+            </Text>
+            <View style={styles.modeInfoBtn}>
+              <Text style={styles.modeInfoText}>i</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.flipBtn}
+            onPress={() => {
+              hapticLight();
+              setFacing((current) => (current === 'back' ? 'front' : 'back'));
+              resetZoom();
+            }}
+            disabled={analyzing}
+          >
+            <Text style={styles.flipIcon}>↻</Text>
+          </TouchableOpacity>
         </View>
-      </SafeAreaView>
+
+        {analyzing && status ? (
+          <View style={styles.statusBar}>
+            <Text style={styles.statusText}>{status}</Text>
+          </View>
+        ) : null}
+
+        <AgentModeCarousel
+          modes={cameraModes}
+          selectedId={activeMode.id}
+          onSelect={selectMode}
+          disabled={analyzing}
+        />
+
+        <View style={styles.captureRow}>
+          <Pressable
+            style={[styles.shutterOuter, analyzing && styles.shutterDisabled]}
+            onPress={capturePhoto}
+            disabled={analyzing}
+          >
+            <View style={styles.shutterInner}>
+              {analyzing ? (
+                <ActivityIndicator color={colors.accent} size="small" />
+              ) : (
+                <Text style={styles.shutterIcon}>✦</Text>
+              )}
+            </View>
+          </Pressable>
+        </View>
+      </View>
 
       <AgentDetailSheet
         visible={detailVisible}
@@ -524,6 +535,11 @@ export function CameraScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: lightColors.tabBarDark },
+  previewViewport: {
+    flex: 1,
+    backgroundColor: colors.cameraBg,
+    overflow: 'hidden',
+  },
   frozenPreview: {
     ...StyleSheet.absoluteFill,
     backgroundColor: lightColors.tabBarDark,
@@ -541,9 +557,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: spacing.lg,
   },
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
+  previewOverlay: {
+    ...StyleSheet.absoluteFill,
+    justifyContent: 'flex-start',
   },
   topBar: {
     flexDirection: 'row',
@@ -611,6 +627,7 @@ const styles = StyleSheet.create({
   bottomPanel: {
     backgroundColor: lightColors.tabBarDark,
     paddingTop: 6,
+    flexShrink: 0,
   },
   controlBar: {
     flexDirection: 'row',
