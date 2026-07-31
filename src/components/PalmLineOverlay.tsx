@@ -185,8 +185,8 @@ export function PalmLineOverlay({ lines, width, height }: Props) {
             key={`${layout.id}-leader`}
             d={leaderPath(layout)}
             fill="none"
-            stroke="rgba(255,255,255,0.72)"
-            strokeWidth={1.2}
+            stroke="rgba(255,255,255,0.38)"
+            strokeWidth={1}
             strokeLinecap="round"
             strokeLinejoin="round"
           />
