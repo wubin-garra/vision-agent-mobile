@@ -1,4 +1,5 @@
 export const PALM_READER_THINKING_STEPS = [
+  '上传掌心照片',
   '确认画面中的掌心与主线',
   '描摹感情线、智慧线与生命线',
   '解读事业线与性格光谱',
@@ -6,9 +7,10 @@ export const PALM_READER_THINKING_STEPS = [
 ];
 
 /** 分析浮层每步最少停留时长（最后一项 0 = 保持到分析结束） */
-export const PALM_READER_THINKING_STEP_DURATIONS_MS = [3200, 3400, 3600, 0];
+export const PALM_READER_THINKING_STEP_DURATIONS_MS = [2800, 5200, 5600, 6000, 0];
 
 export const PALM_READER_STAGE_PHRASES: Record<string, string[]> = {
+  uploading: ['正在上传掌心照片…', '压缩画质，保留纹路细节…', '图片传输中，稍等片刻…'],
   captioning: ['对准掌心，读取纹路走向…', '确认四条主线是否清晰…', '感受掌形与生命力…'],
   routing: ['正在匹配看手相师…', '准备掌纹解读模型…'],
   analyzing: ['描摹感情线与智慧线…', '整理事业线与年龄节点…', '编织性格光谱与金句…'],
@@ -16,6 +18,7 @@ export const PALM_READER_STAGE_PHRASES: Record<string, string[]> = {
 };
 
 export const PALM_READER_STEP_DETAILS: Record<string, string[]> = {
+  '上传掌心照片': ['优化分辨率以便描摹纹路', '加密传输到分析服务'],
   '确认画面中的掌心与主线': ['识别掌心朝向与边界', '区分主线与细纹'],
   '描摹感情线、智慧线与生命线': ['标注感情线末端方向', '读取智慧线深浅与长度'],
   '解读事业线与性格光谱': ['定位事业线上升轨迹', '校准理性/感性光谱'],
@@ -23,6 +26,7 @@ export const PALM_READER_STEP_DETAILS: Record<string, string[]> = {
 };
 
 export const PALM_READER_INPUT_HINTS = [
+  '先把掌心照片稳稳上传…',
   '我在思考掌纹里的节奏…',
   '稍等，正在描摹四条主线…',
   '马上为你整理性格光谱…',
@@ -30,6 +34,11 @@ export const PALM_READER_INPUT_HINTS = [
 ];
 
 export const PALM_READER_THINKING_GROUPS = [
+  {
+    id: 'uploading',
+    title: '上传图片',
+    steps: ['上传掌心照片'],
+  },
   {
     id: 'captioning',
     title: '分析掌心',
@@ -47,6 +56,7 @@ export const PALM_READER_THINKING_GROUPS = [
 ] as const;
 
 export const PALM_READER_STAGE_LABELS: Record<string, string> = {
+  uploading: '上传图片',
   captioning: '分析掌心',
   routing: '选择看手相师',
   analyzing: '生成手相洞察',

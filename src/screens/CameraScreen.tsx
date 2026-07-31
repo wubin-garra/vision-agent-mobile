@@ -15,7 +15,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnalysisThinkingOverlay } from '@/components/AnalysisThinkingOverlay';
 import { BirthdayCollectSheet } from '@/components/BirthdayCollectSheet';
@@ -52,7 +52,6 @@ type StackNav = NativeStackNavigationProp<RootStackParamList>;
 
 export function CameraScreen() {
   const navigation = useNavigation<StackNav>();
-  const insets = useSafeAreaInsets();
   const cameraRef = useRef<CameraView>(null);
   const previewSizeRef = useRef({ width: 0, height: 0 });
   const [permission, requestPermission] = useCameraPermissions();
@@ -149,8 +148,8 @@ export function CameraScreen() {
     setPreviewUri(uri);
     setLastPhoto(uri);
     setAnalyzing(true);
-    setStatus(isPalmReaderMode ? '正在解读掌纹…' : '正在理解画面…');
-    setAnalyzeStage('captioning');
+    setStatus(isPalmReaderMode ? '正在上传掌心照片…' : '正在上传图片…');
+    setAnalyzeStage('uploading');
     setThinkingStep(undefined);
     thinkingStepsRef.current = [];
     setThinkingSteps([]);
@@ -161,6 +160,9 @@ export function CameraScreen() {
         {
           onStatus: (stage) => {
             setAnalyzeStage(stage);
+            if (stage === 'uploading') {
+              setStatus(isPalmReaderMode ? '正在上传掌心照片…' : '正在上传图片…');
+            }
             if (stage === 'routing') setStatus('正在选择智能体…');
             if (stage === 'analyzing') {
               setStatus(isPalmReaderMode ? '正在生成手相洞察…' : '正在生成营养报告…');
@@ -346,7 +348,7 @@ export function CameraScreen() {
 
   return (
     <View style={styles.root}>
-      {/* 取景区仅占控制栏上方 — Chance 式所见即所拍 */}
+      {/* 上：可视取景区（相机只渲染在这里，不被底部控件遮挡） */}
       <View
         style={styles.previewViewport}
         onLayout={(event) => {
@@ -380,8 +382,8 @@ export function CameraScreen() {
           isPalmReaderMode ? <PalmCameraGuide /> : <CameraScanFrame />
         ) : null}
 
-        <SafeAreaView style={styles.previewOverlay} edges={['top']}>
-          <View style={styles.topBar}>
+        <SafeAreaView style={styles.previewOverlay} edges={['top']} pointerEvents="box-none">
+          <View style={styles.topBar} pointerEvents="box-none">
             <CreditsBadge variant="dark" />
             <View style={styles.topActions}>
               <View style={styles.liveBadge}>
@@ -395,8 +397,8 @@ export function CameraScreen() {
             </View>
           </View>
 
-          {showPrompt && !isPalmReaderMode ? (
-            <View style={styles.promptBannerWrap}>
+          {showPrompt ? (
+            <View style={styles.promptBannerWrap} pointerEvents="box-none">
               <View style={styles.promptBanner}>
                 <Text style={styles.promptBannerText} numberOfLines={2}>
                   {activeMode.prompt}
@@ -415,18 +417,20 @@ export function CameraScreen() {
             </View>
           ) : null}
 
-          <View style={styles.spacer} />
+          <View style={styles.spacer} pointerEvents="none" />
 
-          <ZoomSelector
-            presets={zoomPresets}
-            onSelect={applyPreset}
-            disabled={analyzing}
-          />
+          <View style={styles.previewFooter}>
+            <ZoomSelector
+              presets={zoomPresets}
+              onSelect={applyPreset}
+              disabled={analyzing}
+            />
+          </View>
         </SafeAreaView>
       </View>
 
-      {/* 控制栏在取景区外，不再遮挡镜头画面 */}
-      <View style={[styles.bottomPanel, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}>
+      {/* 下：镜头选择与快门（独立控制区，不叠在取景画面上） */}
+      <View style={styles.bottomChrome}>
         <View style={styles.controlBar}>
           <TouchableOpacity onPress={pickFromGallery} disabled={analyzing}>
             {lastPhoto ? (
@@ -534,15 +538,21 @@ export function CameraScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: lightColors.tabBarDark },
+  root: {
+    flex: 1,
+    flexDirection: 'column',
+    backgroundColor: lightColors.tabBarDark,
+  },
+  /** 上半：真实取景，占满控制区以外的全部高度 */
   previewViewport: {
     flex: 1,
-    backgroundColor: colors.cameraBg,
+    minHeight: 0,
+    backgroundColor: '#000',
     overflow: 'hidden',
   },
   frozenPreview: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: lightColors.tabBarDark,
+    backgroundColor: '#000',
   },
   center: {
     flex: 1,
@@ -560,6 +570,10 @@ const styles = StyleSheet.create({
   previewOverlay: {
     ...StyleSheet.absoluteFill,
     justifyContent: 'flex-start',
+  },
+  previewFooter: {
+    paddingBottom: spacing.sm,
+    alignItems: 'center',
   },
   topBar: {
     flexDirection: 'row',
@@ -624,17 +638,21 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   spacer: { flex: 1 },
-  bottomPanel: {
-    backgroundColor: lightColors.tabBarDark,
-    paddingTop: 6,
+  /** 下半：镜头选择 / 快门，与 Tab 同色衔接，不盖住取景 */
+  bottomChrome: {
     flexShrink: 0,
+    backgroundColor: lightColors.tabBarDark,
+    paddingTop: 8,
+    paddingBottom: 4,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(255,255,255,0.08)',
   },
   controlBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
-    marginBottom: spacing.sm,
+    marginBottom: 4,
   },
   galleryThumb: {
     width: 44,
@@ -722,22 +740,23 @@ const styles = StyleSheet.create({
   },
   captureRow: {
     alignItems: 'center',
-    paddingBottom: spacing.sm,
+    paddingTop: 2,
+    paddingBottom: 2,
   },
   shutterOuter: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    borderWidth: 4,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    borderWidth: 3.5,
     borderColor: colors.shutterRing,
     alignItems: 'center',
     justifyContent: 'center',
   },
   shutterDisabled: { opacity: 0.5 },
   shutterInner: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     backgroundColor: '#FFF',
     alignItems: 'center',
     justifyContent: 'center',

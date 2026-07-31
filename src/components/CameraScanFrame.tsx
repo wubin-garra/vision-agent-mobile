@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
   frame: {
     position: 'absolute',
     alignSelf: 'center',
-    top: '34%',
+    top: '28%',
     width: FRAME_SIZE,
     height: FRAME_SIZE,
   },

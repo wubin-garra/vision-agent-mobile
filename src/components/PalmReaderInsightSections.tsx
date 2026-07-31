@@ -31,27 +31,6 @@ function sortPalmLines(lines: PalmLine[]): PalmLine[] {
   });
 }
 
-/** contain 模式下，叠加层应对齐图片实际显示矩形，而不是外框 */
-function computeContainRect(
-  boxW: number,
-  boxH: number,
-  imgW: number,
-  imgH: number,
-) {
-  if (!boxW || !boxH || !imgW || !imgH) {
-    return { left: 0, top: 0, width: boxW, height: boxH };
-  }
-  const scale = Math.min(boxW / imgW, boxH / imgH);
-  const width = imgW * scale;
-  const height = imgH * scale;
-  return {
-    left: (boxW - width) / 2,
-    top: (boxH - height) / 2,
-    width,
-    height,
-  };
-}
-
 function PalmLineSection({
   line,
   defaultOpen,
@@ -132,7 +111,7 @@ export function PalmReaderInsightSections({
   const lines = sortPalmLines(palm?.palm_lines ?? []);
   const spectrum = palm?.personality_spectrum ?? [];
   const chips = insight.explore_chips?.culinary ?? [];
-  const [boxSize, setBoxSize] = useState({ width: 0, height: 0 });
+  const [boxWidth, setBoxWidth] = useState(0);
   const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
@@ -151,16 +130,15 @@ export function PalmReaderInsightSections({
     };
   }, [imageUri]);
 
-  const containRect = useMemo(
-    () =>
-      computeContainRect(
-        boxSize.width,
-        boxSize.height,
-        naturalSize.width,
-        naturalSize.height,
-      ),
-    [boxSize, naturalSize],
-  );
+  // 按原图比例定高：容器与图片同宽高比 → 无黑边，叠加坐标系 = 整图
+  const displayHeight = useMemo(() => {
+    if (!boxWidth) return 380;
+    if (naturalSize.width > 0 && naturalSize.height > 0) {
+      const h = boxWidth * (naturalSize.height / naturalSize.width);
+      return Math.min(520, Math.max(260, Math.round(h)));
+    }
+    return 380;
+  }, [boxWidth, naturalSize]);
 
   return (
     <View style={styles.wrap}>
@@ -182,36 +160,31 @@ export function PalmReaderInsightSections({
         </View>
       ) : null}
 
-      {/* Chance：带掌纹标注的视觉卡 */}
+      {/* Chance：带掌纹标注的视觉卡 — 铺满、无 letterbox */}
       <View style={styles.visualCard}>
         <TouchableOpacity
           activeOpacity={0.95}
           onPress={onOpenFullImage}
           onLayout={(event: LayoutChangeEvent) => {
-            const { width, height } = event.nativeEvent.layout;
-            setBoxSize({ width, height });
+            setBoxWidth(event.nativeEvent.layout.width);
           }}
-          style={styles.visualImageWrap}
+          style={[styles.visualImageWrap, { height: displayHeight }]}
         >
-          <Image source={{ uri: imageUri }} style={styles.visualImage} resizeMode="contain" />
-          {lines.length > 0 && containRect.width > 0 ? (
+          <Image source={{ uri: imageUri }} style={styles.visualImage} resizeMode="cover" />
+          {lines.length > 0 && boxWidth > 0 ? (
             <View
               pointerEvents="none"
               style={[
                 styles.overlaySlot,
                 {
-                  left: containRect.left,
-                  top: containRect.top,
-                  width: containRect.width,
-                  height: containRect.height,
+                  left: 0,
+                  top: 0,
+                  width: boxWidth,
+                  height: displayHeight,
                 },
               ]}
             >
-              <PalmLineOverlay
-                lines={lines}
-                width={containRect.width}
-                height={containRect.height}
-              />
+              <PalmLineOverlay lines={lines} width={boxWidth} height={displayHeight} />
             </View>
           ) : null}
         </TouchableOpacity>
@@ -347,11 +320,9 @@ const styles = StyleSheet.create({
   },
   visualImageWrap: {
     width: '100%',
-    height: 380,
     position: 'relative',
     backgroundColor: '#111111',
-    justifyContent: 'center',
-    alignItems: 'center',
+    overflow: 'hidden',
   },
   visualImage: {
     width: '100%',

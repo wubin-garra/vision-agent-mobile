@@ -170,8 +170,8 @@ export function AgentModeCarousel({ modes, selectedId, onSelect, disabled }: Pro
 
 const styles = StyleSheet.create({
   wrap: {
-    height: ACTIVE_SIZE + 12,
-    marginBottom: 10,
+    height: ACTIVE_SIZE + 4,
+    marginBottom: 4,
   },
   listContent: {
     alignItems: 'center',

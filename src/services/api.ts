@@ -108,6 +108,9 @@ export async function analyzeImageStream(
   },
 ): Promise<AnalyzeResponse | null> {
   try {
+    callbacks.onStatus?.('uploading');
+    // 给上传阶段留一点可见时长，再进入分析
+    await new Promise((resolve) => setTimeout(resolve, 600));
     callbacks.onStatus?.('captioning');
     callbacks.onStatus?.('analyzing');
     const result = await analyzeImage(imageUri, options);

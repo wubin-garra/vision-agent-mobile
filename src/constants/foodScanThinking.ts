@@ -1,4 +1,5 @@
 export const FOOD_SCAN_THINKING_STEPS = [
+  '上传并压缩图片',
   '检查图像是否包含食物',
   '识别主要食材与份量',
   '估算热量与三大营养素',
@@ -6,10 +7,11 @@ export const FOOD_SCAN_THINKING_STEPS = [
 ];
 
 /** 分析浮层每步最少停留时长（最后一项 0 = 保持到分析结束） */
-export const FOOD_SCAN_THINKING_STEP_DURATIONS_MS = [3200, 3400, 3600, 0];
+export const FOOD_SCAN_THINKING_STEP_DURATIONS_MS = [2800, 5200, 5600, 6000, 0];
 
 /** 分析阶段轮换文案（弱化等待感，不展示秒数） */
 export const FOOD_SCAN_STAGE_PHRASES: Record<string, string[]> = {
+  uploading: ['正在上传你的餐食照片…', '压缩画质，准备送入模型…', '图片传输中，稍等片刻…'],
   captioning: ['扫描画面中的食材…', '读取色彩与摆盘层次…', '确认这是一顿可分析的正餐…'],
   routing: ['正在匹配食识拍分析…', '准备营养估算模型…'],
   analyzing: ['估算份量与热量配比…', '计算碳水、脂肪与蛋白质…', '整理过敏原与饮食建议…'],
@@ -18,6 +20,7 @@ export const FOOD_SCAN_STAGE_PHRASES: Record<string, string[]> = {
 
 /** 每个思考步骤下的动态子文案 */
 export const FOOD_SCAN_STEP_DETAILS: Record<string, string[]> = {
+  '上传并压缩图片': ['优化分辨率以便识别', '加密传输到分析服务'],
   '检查图像是否包含食物': ['识别餐盘边界与主体区域', '区分主菜、配菜与装饰'],
   '识别主要食材与份量': ['标注蛋白质来源', '估算碳水与油脂占比'],
   '估算热量与三大营养素': ['对照常见日摄入目标', '校准热量密度'],
@@ -26,6 +29,7 @@ export const FOOD_SCAN_STEP_DETAILS: Record<string, string[]> = {
 
 /** 底部输入框轮换提示 */
 export const FOOD_SCAN_INPUT_HINTS = [
+  '先把照片稳稳上传…',
   '我在思考这顿饭的营养…',
   '稍等，正在估算热量与营养素…',
   '马上为你整理饮食建议…',
@@ -34,6 +38,11 @@ export const FOOD_SCAN_INPUT_HINTS = [
 
 /** Chance 风格思考过程分组（回顾弹层用） */
 export const FOOD_SCAN_THINKING_GROUPS = [
+  {
+    id: 'uploading',
+    title: '上传图片',
+    steps: ['上传并压缩图片'],
+  },
   {
     id: 'captioning',
     title: '分析图像',
@@ -51,6 +60,7 @@ export const FOOD_SCAN_THINKING_GROUPS = [
 ] as const;
 
 export const FOOD_SCAN_STAGE_LABELS: Record<string, string> = {
+  uploading: '上传图片',
   captioning: '分析图像',
   routing: '选择食识拍',
   analyzing: '生成营养报告',
