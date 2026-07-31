@@ -11,9 +11,11 @@ type Props = {
 };
 
 type PxPoint = { x: number; y: number };
+type Side = 'left' | 'right';
 
 type LabelLayout = {
   id: string;
+  side: Side;
   left: number;
   top: number;
   cx: number;
@@ -23,19 +25,20 @@ type LabelLayout = {
   color: string;
 };
 
-/** 各线标签偏好：分散到掌的两侧，减少挤在一起 */
-const LABEL_PRESET: Record<
-  string,
-  { t: number; side: 'left' | 'right'; dy: number }
-> = {
-  heart: { t: 0.78, side: 'right', dy: -14 },
-  head: { t: 0.86, side: 'right', dy: 18 },
-  life: { t: 0.7, side: 'left', dy: 8 },
-  career: { t: 0.42, side: 'left', dy: -28 },
+/**
+ * Chance 风格：文字在画面左右外侧，用引线连到掌上彩点，避免遮挡掌心核心区。
+ * heart/head 偏右；life/career 偏左。
+ */
+const LABEL_PRESET: Record<string, { t: number; side: Side; band: number }> = {
+  heart: { t: 0.82, side: 'right', band: 0.22 },
+  head: { t: 0.88, side: 'right', band: 0.48 },
+  life: { t: 0.62, side: 'left', band: 0.58 },
+  career: { t: 0.5, side: 'left', band: 0.32 },
 };
 
-const LABEL_W = 118;
-const LABEL_H = 40;
+const LABEL_W = 112;
+const LABEL_H = 42;
+const EDGE_PAD = 8;
 
 function resolvePath(line: PalmLine): PalmPoint[] {
   if (line.path && line.path.length >= 2) return line.path;
@@ -49,7 +52,6 @@ function toPx(points: PalmPoint[], width: number, height: number): PxPoint[] {
   }));
 }
 
-/** Catmull-Rom → 平滑三次贝塞尔 */
 function toSmoothPath(points: PxPoint[]): string {
   if (points.length < 2) return '';
   if (points.length === 2) {
@@ -79,53 +81,107 @@ function pointAt(path: PxPoint[], t: number): PxPoint {
   return path[idx]!;
 }
 
-function layoutLabel(
-  line: PalmLine,
-  path: PxPoint[],
-  width: number,
-  height: number,
-): LabelLayout {
-  const preset = LABEL_PRESET[line.id] ?? {
-    t: 0.72,
-    side: 'right' as const,
-    dy: 0,
-  };
-  const p = pointAt(path, preset.t);
-  const left =
-    preset.side === 'right'
-      ? Math.min(p.x + 12, width - LABEL_W - 4)
-      : Math.max(p.x - LABEL_W - 8, 4);
-  const top = Math.min(Math.max(p.y + preset.dy, 6), height - LABEL_H - 4);
-  return {
-    id: line.id,
-    left,
-    top,
-    cx: p.x,
-    cy: p.y,
-    name: line.name,
-    highlight: line.highlight,
-    color: line.color || '#FFFFFF',
-  };
-}
-
-/** 简单垂直避让，避免标签叠在一起 */
-function deconflictLabels(layouts: LabelLayout[], height: number): LabelLayout[] {
-  const sorted = [...layouts].sort((a, b) => a.top - b.top);
-  for (let i = 1; i < sorted.length; i += 1) {
-    const prev = sorted[i - 1]!;
-    const cur = sorted[i]!;
-    const sameSide =
-      Math.abs(prev.left - cur.left) < LABEL_W * 0.7 ||
-      (prev.left < 80 && cur.left < 80) ||
-      (prev.left > 120 && cur.left > 120);
-    if (sameSide && cur.top < prev.top + LABEL_H + 6) {
-      cur.top = Math.min(prev.top + LABEL_H + 8, height - LABEL_H - 4);
+/** 掌纹点包围盒，用于把文字推到掌区外侧 */
+function palmBounds(allPaths: PxPoint[][]) {
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const path of allPaths) {
+    for (const p of path) {
+      minX = Math.min(minX, p.x);
+      maxX = Math.max(maxX, p.x);
+      minY = Math.min(minY, p.y);
+      maxY = Math.max(maxY, p.y);
     }
   }
-  return sorted;
+  if (!Number.isFinite(minX)) {
+    return { minX: 0, maxX: 0, minY: 0, maxY: 0 };
+  }
+  const padX = (maxX - minX) * 0.08;
+  const padY = (maxY - minY) * 0.06;
+  return {
+    minX: minX - padX,
+    maxX: maxX + padX,
+    minY: minY - padY,
+    maxY: maxY + padY,
+  };
 }
 
-/** Chance：平滑虚线 + 彩点 + 分散标签 */
+function layoutOutsideLabels(
+  items: Array<{ line: PalmLine; px: PxPoint[] }>,
+  width: number,
+  height: number,
+): LabelLayout[] {
+  const bounds = palmBounds(items.map((i) => i.px));
+  const gutterLeft = Math.max(EDGE_PAD, Math.min(bounds.minX - LABEL_W - 6, EDGE_PAD));
+  const gutterRight = Math.min(
+    width - LABEL_W - EDGE_PAD,
+    Math.max(bounds.maxX + 6, width - LABEL_W - EDGE_PAD),
+  );
+
+  // 若掌几乎顶满宽度，仍强制贴左右边缘
+  const leftCol = Math.min(gutterLeft, EDGE_PAD + 2);
+  const rightCol = Math.max(gutterRight, width - LABEL_W - EDGE_PAD);
+
+  const layouts: LabelLayout[] = items.map(({ line, px }) => {
+    const preset = LABEL_PRESET[line.id] ?? {
+      t: 0.72,
+      side: 'right' as Side,
+      band: 0.4,
+    };
+    const anchor = pointAt(px, preset.t);
+    const left = preset.side === 'right' ? rightCol : leftCol;
+    const top = Math.min(
+      Math.max(preset.band * height - LABEL_H / 2, EDGE_PAD),
+      height - LABEL_H - EDGE_PAD,
+    );
+    return {
+      id: line.id,
+      side: preset.side,
+      left,
+      top,
+      cx: anchor.x,
+      cy: anchor.y,
+      name: line.name,
+      highlight: line.highlight,
+      color: line.color || '#FFFFFF',
+    };
+  });
+
+  // 同侧垂直避让
+  for (const side of ['left', 'right'] as Side[]) {
+    const group = layouts
+      .filter((l) => l.side === side)
+      .sort((a, b) => a.top - b.top);
+    for (let i = 1; i < group.length; i += 1) {
+      const prev = group[i - 1]!;
+      const cur = group[i]!;
+      if (cur.top < prev.top + LABEL_H + 10) {
+        cur.top = Math.min(prev.top + LABEL_H + 12, height - LABEL_H - EDGE_PAD);
+      }
+    }
+  }
+
+  return layouts;
+}
+
+/** Chance 引线：彩点 → 折线 → 外侧文字 */
+function leaderPath(layout: LabelLayout): string {
+  const attachX =
+    layout.side === 'right' ? layout.left - 2 : layout.left + LABEL_W + 2;
+  const attachY = layout.top + 14;
+  const outDir = layout.side === 'right' ? 1 : -1;
+  const elbowX = layout.cx + outDir * Math.max(18, Math.abs(attachX - layout.cx) * 0.35);
+  const clampedElbow =
+    layout.side === 'right'
+      ? Math.min(elbowX, attachX - 8)
+      : Math.max(elbowX, attachX + 8);
+
+  return `M ${layout.cx} ${layout.cy} L ${clampedElbow} ${layout.cy} L ${clampedElbow} ${attachY} L ${attachX} ${attachY}`;
+}
+
+/** Chance：掌心虚线 + 彩点 + 外侧解读 + 引线 */
 export function PalmLineOverlay({ lines, width, height }: Props) {
   if (!width || !height || lines.length === 0) return null;
 
@@ -133,18 +189,13 @@ export function PalmLineOverlay({ lines, width, height }: Props) {
     .map((line) => {
       const px = toPx(resolvePath(line), width, height);
       if (px.length < 2) return null;
-      return { line, px, layout: layoutLabel(line, px, width, height) };
+      return { line, px };
     })
-    .filter(Boolean) as Array<{
-    line: PalmLine;
-    px: PxPoint[];
-    layout: LabelLayout;
-  }>;
+    .filter(Boolean) as Array<{ line: PalmLine; px: PxPoint[] }>;
 
-  const layouts = deconflictLabels(
-    prepared.map((p) => p.layout),
-    height,
-  );
+  if (prepared.length === 0) return null;
+
+  const layouts = layoutOutsideLabels(prepared, width, height);
   const layoutById = new Map(layouts.map((l) => [l.id, l]));
 
   return (
@@ -163,6 +214,19 @@ export function PalmLineOverlay({ lines, width, height }: Props) {
             opacity={0.92}
           />
         ))}
+
+        {layouts.map((layout) => (
+          <Path
+            key={`${layout.id}-leader`}
+            d={leaderPath(layout)}
+            fill="none"
+            stroke="rgba(255,255,255,0.72)"
+            strokeWidth={1.2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        ))}
+
         {prepared.map(({ line }) => {
           const layout = layoutById.get(line.id);
           if (!layout) return null;
@@ -183,7 +247,11 @@ export function PalmLineOverlay({ lines, width, height }: Props) {
       {layouts.map((layout) => (
         <View
           key={`${layout.id}-label`}
-          style={[styles.label, { left: layout.left, top: layout.top }]}
+          style={[
+            styles.label,
+            layout.side === 'left' ? styles.labelLeft : styles.labelRight,
+            { left: layout.left, top: layout.top, width: LABEL_W },
+          ]}
         >
           <Text style={styles.labelName}>{layout.name}</Text>
           <Text style={styles.labelHighlight} numberOfLines={2}>
@@ -203,23 +271,32 @@ const styles = StyleSheet.create({
   },
   label: {
     position: 'absolute',
-    maxWidth: LABEL_W,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    borderRadius: 6,
+    backgroundColor: 'rgba(0,0,0,0.28)',
+  },
+  labelLeft: {
+    alignItems: 'flex-start',
+  },
+  labelRight: {
+    alignItems: 'flex-end',
   },
   labelName: {
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '700',
-    textShadowColor: 'rgba(0,0,0,0.55)',
+    textShadowColor: 'rgba(0,0,0,0.45)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    textShadowRadius: 2,
   },
   labelHighlight: {
     color: 'rgba(255,255,255,0.92)',
     fontSize: 11,
     lineHeight: 15,
     fontWeight: '500',
-    textShadowColor: 'rgba(0,0,0,0.55)',
+    textShadowColor: 'rgba(0,0,0,0.45)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    textShadowRadius: 2,
   },
 });
