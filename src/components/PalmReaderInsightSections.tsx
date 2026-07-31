@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Image,
   LayoutChangeEvent,
@@ -29,6 +29,27 @@ function sortPalmLines(lines: PalmLine[]): PalmLine[] {
     const bi = LINE_ORDER.indexOf(b.id as (typeof LINE_ORDER)[number]);
     return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
   });
+}
+
+/** contain 模式下，叠加层应对齐图片实际显示矩形，而不是外框 */
+function computeContainRect(
+  boxW: number,
+  boxH: number,
+  imgW: number,
+  imgH: number,
+) {
+  if (!boxW || !boxH || !imgW || !imgH) {
+    return { left: 0, top: 0, width: boxW, height: boxH };
+  }
+  const scale = Math.min(boxW / imgW, boxH / imgH);
+  const width = imgW * scale;
+  const height = imgH * scale;
+  return {
+    left: (boxW - width) / 2,
+    top: (boxH - height) / 2,
+    width,
+    height,
+  };
 }
 
 function PalmLineSection({
@@ -111,7 +132,35 @@ export function PalmReaderInsightSections({
   const lines = sortPalmLines(palm?.palm_lines ?? []);
   const spectrum = palm?.personality_spectrum ?? [];
   const chips = insight.explore_chips?.culinary ?? [];
-  const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+  const [boxSize, setBoxSize] = useState({ width: 0, height: 0 });
+  const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    let cancelled = false;
+    Image.getSize(
+      imageUri,
+      (width, height) => {
+        if (!cancelled) setNaturalSize({ width, height });
+      },
+      () => {
+        if (!cancelled) setNaturalSize({ width: 0, height: 0 });
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [imageUri]);
+
+  const containRect = useMemo(
+    () =>
+      computeContainRect(
+        boxSize.width,
+        boxSize.height,
+        naturalSize.width,
+        naturalSize.height,
+      ),
+    [boxSize, naturalSize],
+  );
 
   return (
     <View style={styles.wrap}>
@@ -140,17 +189,30 @@ export function PalmReaderInsightSections({
           onPress={onOpenFullImage}
           onLayout={(event: LayoutChangeEvent) => {
             const { width, height } = event.nativeEvent.layout;
-            setImageSize({ width, height });
+            setBoxSize({ width, height });
           }}
           style={styles.visualImageWrap}
         >
-          <Image source={{ uri: imageUri }} style={styles.visualImage} resizeMode="cover" />
-          {lines.length > 0 && imageSize.width > 0 ? (
-            <PalmLineOverlay
-              lines={lines}
-              width={imageSize.width}
-              height={imageSize.height}
-            />
+          <Image source={{ uri: imageUri }} style={styles.visualImage} resizeMode="contain" />
+          {lines.length > 0 && containRect.width > 0 ? (
+            <View
+              pointerEvents="none"
+              style={[
+                styles.overlaySlot,
+                {
+                  left: containRect.left,
+                  top: containRect.top,
+                  width: containRect.width,
+                  height: containRect.height,
+                },
+              ]}
+            >
+              <PalmLineOverlay
+                lines={lines}
+                width={containRect.width}
+                height={containRect.height}
+              />
+            </View>
           ) : null}
         </TouchableOpacity>
 
@@ -285,13 +347,18 @@ const styles = StyleSheet.create({
   },
   visualImageWrap: {
     width: '100%',
-    height: 340,
+    height: 380,
     position: 'relative',
-    backgroundColor: lightColors.surface,
+    backgroundColor: '#111111',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   visualImage: {
     width: '100%',
     height: '100%',
+  },
+  overlaySlot: {
+    position: 'absolute',
   },
   scrollFab: {
     position: 'absolute',
