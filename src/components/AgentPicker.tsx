@@ -13,13 +13,11 @@ interface AgentPickerProps {
 const DEFAULT_AGENTS: AgentId[] = [
   'general_curiosity',
   'local_guide',
-  'art_critic',
-  'design_critic',
   'stylist',
   'food_explorer',
   'food_scan',
   'palm_reader',
-  'text_reader',
+  'menu_translator',
 ];
 
 export function AgentPicker({ agents = DEFAULT_AGENTS, selected, onSelect }: AgentPickerProps) {

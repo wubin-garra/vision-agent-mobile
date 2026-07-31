@@ -10,12 +10,10 @@ export interface PerspectiveItem {
 export const perspectives: PerspectiveItem[] = [
   { id: 'palm_reader', label: '看手相师', emoji: '🤚', isNew: true },
   { id: 'local_guide', label: '本地向导', emoji: '🗺️', isNew: true },
-  { id: 'art_critic', label: '艺术解读', emoji: '🎨', isNew: true },
+  { id: 'menu_translator', label: '翻译师', emoji: '🌐', isNew: true },
   { id: 'stylist', label: '穿搭检查', emoji: '👔', isNew: true },
   { id: 'food_explorer', label: '美食探索', emoji: '🍜' },
   { id: 'food_scan', label: '食识拍', emoji: '🔎' },
-  { id: 'design_critic', label: '设计灵感', emoji: '🪑' },
-  { id: 'text_reader', label: '文字识别', emoji: '📝' },
   { id: 'general_curiosity', label: '好奇心', emoji: '✨' },
 ];
 

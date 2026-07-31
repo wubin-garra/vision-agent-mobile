@@ -7,6 +7,7 @@ export type AgentId =
   | 'food_scan'
   | 'palm_reader'
   | 'text_reader'
+  | 'menu_translator'
   | 'general_curiosity';
 
 export interface InsightContext {

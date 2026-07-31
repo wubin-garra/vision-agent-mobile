@@ -78,6 +78,7 @@ export const AGENT_LABELS: Record<string, string> = {
   food_scan: '食识拍',
   palm_reader: '看手相师',
   text_reader: '文字解读',
+  menu_translator: '翻译师',
   general_curiosity: '好奇心',
 };
 
