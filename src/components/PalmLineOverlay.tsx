@@ -12,6 +12,31 @@ type Props = {
 
 type PxPoint = { x: number; y: number };
 
+type LabelLayout = {
+  id: string;
+  left: number;
+  top: number;
+  cx: number;
+  cy: number;
+  name: string;
+  highlight: string;
+  color: string;
+};
+
+/** 各线标签偏好：分散到掌的两侧，减少挤在一起 */
+const LABEL_PRESET: Record<
+  string,
+  { t: number; side: 'left' | 'right'; dy: number }
+> = {
+  heart: { t: 0.78, side: 'right', dy: -14 },
+  head: { t: 0.86, side: 'right', dy: 18 },
+  life: { t: 0.7, side: 'left', dy: 8 },
+  career: { t: 0.42, side: 'left', dy: -28 },
+};
+
+const LABEL_W = 118;
+const LABEL_H = 40;
+
 function resolvePath(line: PalmLine): PalmPoint[] {
   if (line.path && line.path.length >= 2) return line.path;
   return DEFAULT_PALM_LINE_PATHS[line.id] ?? [];
@@ -24,7 +49,7 @@ function toPx(points: PalmPoint[], width: number, height: number): PxPoint[] {
   }));
 }
 
-/** Catmull-Rom → 平滑三次贝塞尔，让叠加更接近 Chance 的流畅虚线 */
+/** Catmull-Rom → 平滑三次贝塞尔 */
 function toSmoothPath(points: PxPoint[]): string {
   if (points.length < 2) return '';
   if (points.length === 2) {
@@ -46,73 +71,126 @@ function toSmoothPath(points: PxPoint[]): string {
   return d;
 }
 
-function labelAnchor(path: PxPoint[], width: number, height: number) {
-  // 取靠近末端 70% 处放标签，减少挤在指根
-  const idx = Math.min(path.length - 1, Math.max(1, Math.floor(path.length * 0.72)));
-  const p = path[idx]!;
-  const preferRight = p.x < width * 0.55;
-  const left = preferRight
-    ? Math.min(p.x + 10, width - 132)
-    : Math.max(p.x - 130, 4);
-  const top = Math.min(Math.max(p.y - 10, 6), height - 44);
-  return { left, top, cx: p.x, cy: p.y };
+function pointAt(path: PxPoint[], t: number): PxPoint {
+  const idx = Math.min(
+    path.length - 1,
+    Math.max(0, Math.round(t * (path.length - 1))),
+  );
+  return path[idx]!;
 }
 
-/** Chance：平滑虚线 + 彩点 +「线名 / 年龄高光」 */
+function layoutLabel(
+  line: PalmLine,
+  path: PxPoint[],
+  width: number,
+  height: number,
+): LabelLayout {
+  const preset = LABEL_PRESET[line.id] ?? {
+    t: 0.72,
+    side: 'right' as const,
+    dy: 0,
+  };
+  const p = pointAt(path, preset.t);
+  const left =
+    preset.side === 'right'
+      ? Math.min(p.x + 12, width - LABEL_W - 4)
+      : Math.max(p.x - LABEL_W - 8, 4);
+  const top = Math.min(Math.max(p.y + preset.dy, 6), height - LABEL_H - 4);
+  return {
+    id: line.id,
+    left,
+    top,
+    cx: p.x,
+    cy: p.y,
+    name: line.name,
+    highlight: line.highlight,
+    color: line.color || '#FFFFFF',
+  };
+}
+
+/** 简单垂直避让，避免标签叠在一起 */
+function deconflictLabels(layouts: LabelLayout[], height: number): LabelLayout[] {
+  const sorted = [...layouts].sort((a, b) => a.top - b.top);
+  for (let i = 1; i < sorted.length; i += 1) {
+    const prev = sorted[i - 1]!;
+    const cur = sorted[i]!;
+    const sameSide =
+      Math.abs(prev.left - cur.left) < LABEL_W * 0.7 ||
+      (prev.left < 80 && cur.left < 80) ||
+      (prev.left > 120 && cur.left > 120);
+    if (sameSide && cur.top < prev.top + LABEL_H + 6) {
+      cur.top = Math.min(prev.top + LABEL_H + 8, height - LABEL_H - 4);
+    }
+  }
+  return sorted;
+}
+
+/** Chance：平滑虚线 + 彩点 + 分散标签 */
 export function PalmLineOverlay({ lines, width, height }: Props) {
   if (!width || !height || lines.length === 0) return null;
+
+  const prepared = lines
+    .map((line) => {
+      const px = toPx(resolvePath(line), width, height);
+      if (px.length < 2) return null;
+      return { line, px, layout: layoutLabel(line, px, width, height) };
+    })
+    .filter(Boolean) as Array<{
+    line: PalmLine;
+    px: PxPoint[];
+    layout: LabelLayout;
+  }>;
+
+  const layouts = deconflictLabels(
+    prepared.map((p) => p.layout),
+    height,
+  );
+  const layoutById = new Map(layouts.map((l) => [l.id, l]));
 
   return (
     <View style={[styles.wrap, { width, height }]} pointerEvents="none">
       <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
-        {lines.map((line) => {
-          const px = toPx(resolvePath(line), width, height);
-          if (px.length < 2) return null;
-          return (
-            <Path
-              key={`${line.id}-line`}
-              d={toSmoothPath(px)}
-              fill="none"
-              stroke="#FFFFFF"
-              strokeWidth={2.2}
-              strokeDasharray="7 5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              opacity={0.95}
-            />
-          );
-        })}
-        {lines.map((line) => {
-          const px = toPx(resolvePath(line), width, height);
-          if (px.length < 2) return null;
-          const { cx, cy } = labelAnchor(px, width, height);
+        {prepared.map(({ line, px }) => (
+          <Path
+            key={`${line.id}-line`}
+            d={toSmoothPath(px)}
+            fill="none"
+            stroke="#FFFFFF"
+            strokeWidth={1.8}
+            strokeDasharray="6 5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            opacity={0.92}
+          />
+        ))}
+        {prepared.map(({ line }) => {
+          const layout = layoutById.get(line.id);
+          if (!layout) return null;
           return (
             <Circle
               key={`${line.id}-dot`}
-              cx={cx}
-              cy={cy}
-              r={5.5}
-              fill={line.color || '#FFFFFF'}
+              cx={layout.cx}
+              cy={layout.cy}
+              r={5}
+              fill={layout.color}
               stroke="#FFFFFF"
-              strokeWidth={1.5}
+              strokeWidth={1.4}
             />
           );
         })}
       </Svg>
 
-      {lines.map((line) => {
-        const px = toPx(resolvePath(line), width, height);
-        if (px.length < 2) return null;
-        const { left, top } = labelAnchor(px, width, height);
-        return (
-          <View key={`${line.id}-label`} style={[styles.label, { left, top }]}>
-            <Text style={styles.labelName}>{line.name}</Text>
-            <Text style={styles.labelHighlight} numberOfLines={2}>
-              {line.highlight}
-            </Text>
-          </View>
-        );
-      })}
+      {layouts.map((layout) => (
+        <View
+          key={`${layout.id}-label`}
+          style={[styles.label, { left: layout.left, top: layout.top }]}
+        >
+          <Text style={styles.labelName}>{layout.name}</Text>
+          <Text style={styles.labelHighlight} numberOfLines={2}>
+            {layout.highlight}
+          </Text>
+        </View>
+      ))}
     </View>
   );
 }
@@ -125,7 +203,7 @@ const styles = StyleSheet.create({
   },
   label: {
     position: 'absolute',
-    maxWidth: 128,
+    maxWidth: LABEL_W,
   },
   labelName: {
     color: '#FFFFFF',
