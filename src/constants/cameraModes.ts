@@ -41,10 +41,10 @@ export const cameraModes: CameraModeItem[] = [
   },
   {
     id: 'food_explorer',
-    label: '美食探索',
-    emoji: '🍜',
-    prompt: '对准美食，发现风味故事与周边推荐。',
-    description: '解构菜品风味、文化背景与用餐场景，并推荐附近值得一试的餐厅或同类美食。',
+    label: '零食分析',
+    emoji: '🍿',
+    prompt: '对准零食包装或小食，了解成分、风味与食用提示。',
+    description: '识别零食品类与口味，解读配料亮点、过敏原与是否适合当下解馋。',
   },
   {
     id: 'local_guide',
