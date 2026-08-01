@@ -121,10 +121,10 @@ android/app/build/outputs/apk/release/app-release.apk
 docs/               # 产品 / 埋点 / 食识拍
 src/
 ├── components/
-├── constants/
+├── constants/          # 含 agentThemes.ts：各 Agent 主题唯一调色入口（AGENT_BRANDS）
 ├── screens/
 ├── services/
 ├── store/
-├── theme/
+├── theme/              # 全局浅/深色基础色；Agent 专属色见 agentThemes
 └── types/
 ```

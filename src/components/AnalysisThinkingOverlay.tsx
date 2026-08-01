@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
@@ -8,6 +8,10 @@ import {
   View,
 } from 'react-native';
 
+import {
+  resolveThinkingPack,
+  type AnalysisThinkingVariant,
+} from '@/constants/analysisThinking';
 import {
   FOOD_SCAN_INPUT_HINTS,
   FOOD_SCAN_STAGE_LABELS,
@@ -24,7 +28,7 @@ import {
 } from '@/constants/palmReaderThinking';
 import { lightColors, radius, spacing, typography } from '@/theme';
 
-type ThinkingVariant = 'food_scan' | 'palm_reader';
+export type ThinkingVariant = AnalysisThinkingVariant;
 
 type Props = {
   imageUri: string | null;
@@ -37,6 +41,7 @@ function useRotatingPhrase(phrases: string[], intervalMs = 2200) {
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
+    setIndex(0);
     if (phrases.length <= 1) return;
     const timer = setInterval(() => {
       setIndex((prev) => (prev + 1) % phrases.length);
@@ -47,40 +52,56 @@ function useRotatingPhrase(phrases: string[], intervalMs = 2200) {
   return phrases[index] ?? phrases[0] ?? '';
 }
 
+function packForVariant(variant: ThinkingVariant) {
+  if (variant === 'palm_reader') {
+    return {
+      steps: PALM_READER_THINKING_STEPS,
+      stagePhrases: PALM_READER_STAGE_PHRASES,
+      stepDetails: PALM_READER_STEP_DETAILS,
+      inputHints: PALM_READER_INPUT_HINTS,
+      stageLabels: PALM_READER_STAGE_LABELS,
+      fallbackTitle: '看手相师思考中',
+    };
+  }
+  if (variant === 'food_scan') {
+    return {
+      steps: FOOD_SCAN_THINKING_STEPS,
+      stagePhrases: FOOD_SCAN_STAGE_PHRASES,
+      stepDetails: FOOD_SCAN_STEP_DETAILS,
+      inputHints: FOOD_SCAN_INPUT_HINTS,
+      stageLabels: FOOD_SCAN_STAGE_LABELS,
+      fallbackTitle: '食识拍思考中',
+    };
+  }
+  const pack = resolveThinkingPack(variant);
+  return {
+    steps: pack.steps,
+    stagePhrases: pack.stagePhrases,
+    stepDetails: pack.stepDetails,
+    inputHints: pack.inputHints,
+    stageLabels: pack.stageLabels,
+    fallbackTitle: pack.fallbackTitle,
+  };
+}
+
+/** 拍照后全屏等待层：冻结预览 + 扫描线 + 分步思考文案 */
 export function AnalysisThinkingOverlay({
   imageUri,
   stage,
   thinkingStep,
-  variant = 'food_scan',
+  variant = 'general',
 }: Props) {
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
   const lastStepRef = useRef<string | undefined>(undefined);
   const scanAnim = useRef(new Animated.Value(0.08)).current;
   const pulseAnim = useRef(new Animated.Value(0.4)).current;
 
-  const config =
-    variant === 'palm_reader'
-      ? {
-          steps: PALM_READER_THINKING_STEPS,
-          stagePhrases: PALM_READER_STAGE_PHRASES,
-          stepDetails: PALM_READER_STEP_DETAILS,
-          inputHints: PALM_READER_INPUT_HINTS,
-          stageLabels: PALM_READER_STAGE_LABELS,
-          fallbackTitle: '看手相师思考中',
-        }
-      : {
-          steps: FOOD_SCAN_THINKING_STEPS,
-          stagePhrases: FOOD_SCAN_STAGE_PHRASES,
-          stepDetails: FOOD_SCAN_STEP_DETAILS,
-          inputHints: FOOD_SCAN_INPUT_HINTS,
-          stageLabels: FOOD_SCAN_STAGE_LABELS,
-          fallbackTitle: '食识拍思考中',
-        };
+  const config = useMemo(() => packForVariant(variant), [variant]);
 
   useEffect(() => {
     setCompletedSteps([]);
     lastStepRef.current = undefined;
-  }, [imageUri]);
+  }, [imageUri, variant]);
 
   useEffect(() => {
     if (!thinkingStep || thinkingStep === lastStepRef.current) return;
@@ -185,12 +206,29 @@ export function AnalysisThinkingOverlay({
             return (
               <View key={step} style={styles.stepBlock}>
                 <View style={styles.stepRow}>
-                  <View style={[styles.stepIcon, done && styles.stepIconDone, active && styles.stepIconActive]}>
-                    <Text style={[styles.stepIconText, (done || active) && styles.stepIconTextOn]}>
+                  <View
+                    style={[
+                      styles.stepIcon,
+                      done && styles.stepIconDone,
+                      active && styles.stepIconActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.stepIconText,
+                        (done || active) && styles.stepIconTextOn,
+                      ]}
+                    >
                       {done ? '✓' : active ? '◉' : '○'}
                     </Text>
                   </View>
-                  <Text style={[styles.stepText, active && styles.stepTextActive, done && styles.stepTextDone]}>
+                  <Text
+                    style={[
+                      styles.stepText,
+                      active && styles.stepTextActive,
+                      done && styles.stepTextDone,
+                    ]}
+                  >
                     {step}
                   </Text>
                 </View>

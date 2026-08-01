@@ -2,6 +2,7 @@ import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native
 
 import { ChipRow } from '@/components/InsightCard';
 import { NutritionRing } from '@/components/NutritionRing';
+import type { AgentTheme } from '@/constants/agentThemes';
 import { lightColors, radius, spacing, typography } from '@/theme';
 import type { StructuredInsight } from '@/types/insight';
 
@@ -9,13 +10,16 @@ type Props = {
   insight: StructuredInsight;
   onSelectQuestion: (question: string) => void;
   onScrollToBottom?: () => void;
+  theme: AgentTheme;
 };
 
 export function FoodScanInsightSections({
   insight,
   onSelectQuestion,
   onScrollToBottom,
+  theme,
 }: Props) {
+  const { chipBg, chipText } = theme;
   const nutrition = insight.nutrition;
   const chips = insight.explore_chips?.culinary ?? [];
 
@@ -113,7 +117,13 @@ export function FoodScanInsightSections({
       {chips.length > 0 ? (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>想了解更多吗？</Text>
-          <ChipRow items={chips} onPress={onSelectQuestion} light />
+          <ChipRow
+            items={chips}
+            onPress={onSelectQuestion}
+            light
+            chipBg={chipBg}
+            chipText={chipText}
+          />
           <Text style={styles.aiNote}>由 Vision Agent AI 生成，请验证重要信息。</Text>
         </View>
       ) : null}

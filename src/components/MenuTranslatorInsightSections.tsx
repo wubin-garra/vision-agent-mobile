@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { ChipRow, InsightSection } from '@/components/InsightCard';
+import type { AgentTheme } from '@/constants/agentThemes';
 import { colors, radius, spacing, typography } from '@/theme';
 import type { StructuredInsight } from '@/types/insight';
 
@@ -8,6 +9,8 @@ interface Props {
   insight: StructuredInsight;
   /** 点击追问 chip 时回填输入框 */
   onSelectQuestion: (question: string) => void;
+  /** 智能体主题（颜色统一从 agentThemes 来） */
+  theme: AgentTheme;
 }
 
 /**
@@ -15,20 +18,46 @@ interface Props {
  * 核心数据在 insight.menu_translation：dishes 原文/译文对照 + ordering_tips。
  * 若无 dishes，InsightScreen 会回退到通用线索列表。
  */
-export function MenuTranslatorInsightSections({ insight, onSelectQuestion }: Props) {
+export function MenuTranslatorInsightSections({
+  insight,
+  onSelectQuestion,
+  theme,
+}: Props) {
   const menu = insight.menu_translation;
   const dishes = menu?.dishes ?? [];
   const tips = menu?.ordering_tips ?? [];
   const exploreChips = insight.explore_chips;
+  const {
+    accent,
+    accentSoft,
+    text: textColor,
+    textMuted,
+    chipBg,
+    chipText,
+    surface,
+    border,
+  } = theme;
 
   return (
     <>
       {/* subtitle 一般为「源语言 → 目标语言」 */}
-      {insight.subtitle ? <Text style={styles.subtitle}>{insight.subtitle}</Text> : null}
+      {insight.subtitle ? (
+        <Text style={[styles.subtitle, textMuted ? { color: textMuted } : null]}>
+          {insight.subtitle}
+        </Text>
+      ) : null}
 
       {insight.narrative ? (
-        <View style={styles.narrativeBlock}>
-          <Text style={styles.narrative}>{insight.narrative}</Text>
+        <View
+          style={[
+            styles.narrativeBlock,
+            accent ? { borderLeftColor: accent } : null,
+            surface ? { backgroundColor: surface } : null,
+          ]}
+        >
+          <Text style={[styles.narrative, textColor ? { color: textColor } : null]}>
+            {insight.narrative}
+          </Text>
         </View>
       ) : null}
 
@@ -39,19 +68,45 @@ export function MenuTranslatorInsightSections({ insight, onSelectQuestion }: Pro
             {dishes.map((dish, index) => (
               <View
                 key={`${dish.original}-${dish.translation}-${index}`}
-                style={styles.dishCard}
+                style={[
+                  styles.dishCard,
+                  surface ? { backgroundColor: surface } : null,
+                  border ? { borderColor: border } : null,
+                ]}
               >
                 <View style={styles.dishHeader}>
-                  <Text style={styles.dishOriginal}>{dish.original}</Text>
-                  {dish.price ? <Text style={styles.dishPrice}>{dish.price}</Text> : null}
+                  <Text style={[styles.dishOriginal, textMuted ? { color: textMuted } : null]}>
+                    {dish.original}
+                  </Text>
+                  {dish.price ? (
+                    <Text style={[styles.dishPrice, accent ? { color: accent } : null]}>
+                      {dish.price}
+                    </Text>
+                  ) : null}
                 </View>
-                <Text style={styles.dishTranslation}>{dish.translation}</Text>
-                {dish.notes ? <Text style={styles.dishNotes}>{dish.notes}</Text> : null}
+                <Text
+                  style={[styles.dishTranslation, textColor ? { color: textColor } : null]}
+                >
+                  {dish.translation}
+                </Text>
+                {dish.notes ? (
+                  <Text style={[styles.dishNotes, textMuted ? { color: textMuted } : null]}>
+                    {dish.notes}
+                  </Text>
+                ) : null}
                 {dish.tags && dish.tags.length > 0 ? (
                   <View style={styles.tagRow}>
                     {dish.tags.map((tag) => (
-                      <View key={tag} style={styles.tag}>
-                        <Text style={styles.tagText}>{tag}</Text>
+                      <View
+                        key={tag}
+                        style={[
+                          styles.tag,
+                          accentSoft ? { backgroundColor: accentSoft } : null,
+                        ]}
+                      >
+                        <Text style={[styles.tagText, accent ? { color: accent } : null]}>
+                          {tag}
+                        </Text>
                       </View>
                     ))}
                   </View>
@@ -64,14 +119,16 @@ export function MenuTranslatorInsightSections({ insight, onSelectQuestion }: Pro
 
       {menu?.dietary_summary ? (
         <InsightSection title="忌口总览">
-          <Text style={styles.bodyText}>{menu.dietary_summary}</Text>
+          <Text style={[styles.bodyText, textColor ? { color: textColor } : null]}>
+            {menu.dietary_summary}
+          </Text>
         </InsightSection>
       ) : null}
 
       {tips.length > 0 ? (
         <InsightSection title="点餐提示">
           {tips.map((tip) => (
-            <Text key={tip} style={styles.tipLine}>
+            <Text key={tip} style={[styles.tipLine, textColor ? { color: textColor } : null]}>
               • {tip}
             </Text>
           ))}
@@ -81,13 +138,17 @@ export function MenuTranslatorInsightSections({ insight, onSelectQuestion }: Pro
       {/* 有结构化 tips 时不再重复展示 context.practical，避免文案重复 */}
       {insight.context.practical && !tips.length ? (
         <InsightSection title="实用建议">
-          <Text style={styles.bodyText}>{insight.context.practical}</Text>
+          <Text style={[styles.bodyText, textColor ? { color: textColor } : null]}>
+            {insight.context.practical}
+          </Text>
         </InsightSection>
       ) : null}
 
       {insight.context.cultural ? (
         <InsightSection title="文化小注">
-          <Text style={styles.bodyText}>{insight.context.cultural}</Text>
+          <Text style={[styles.bodyText, textColor ? { color: textColor } : null]}>
+            {insight.context.cultural}
+          </Text>
         </InsightSection>
       ) : null}
 
@@ -97,8 +158,15 @@ export function MenuTranslatorInsightSections({ insight, onSelectQuestion }: Pro
         <View style={styles.exploreBlock}>
           {exploreChips.culinary.length > 0 ? (
             <View style={styles.exploreGroup}>
-              <Text style={styles.exploreTitle}>继续点餐</Text>
-              <ChipRow items={exploreChips.culinary} onPress={onSelectQuestion} />
+              <Text style={[styles.exploreTitle, textMuted ? { color: textMuted } : null]}>
+                继续点餐
+              </Text>
+              <ChipRow
+                items={exploreChips.culinary}
+                onPress={onSelectQuestion}
+                chipBg={chipBg}
+                chipText={chipText}
+              />
             </View>
           ) : null}
         </View>

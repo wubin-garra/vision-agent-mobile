@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { ChipRow, InsightSection, TagList } from '@/components/InsightCard';
+import type { AgentTheme } from '@/constants/agentThemes';
 import { colors, radius, spacing, typography } from '@/theme';
 import type { StructuredInsight } from '@/types/insight';
 
@@ -8,6 +9,8 @@ interface Props {
   insight: StructuredInsight;
   /** 点击追问 chip 时回填输入框 */
   onSelectQuestion: (question: string) => void;
+  /** 智能体主题（颜色统一从 agentThemes 来） */
+  theme: AgentTheme;
 }
 
 /**
@@ -15,18 +18,19 @@ interface Props {
  * 核心数据：snack_analysis（档案）+ flavor_notes（风味）+ allergens（过敏原）。
  * agent_id 仍为 food_explorer，与历史记忆兼容。
  */
-export function SnackInsightSections({ insight, onSelectQuestion }: Props) {
+export function SnackInsightSections({ insight, onSelectQuestion, theme }: Props) {
   const snack = insight.snack_analysis;
   const exploreChips = insight.explore_chips;
   const allergens = insight.allergens ?? [];
+  const { accent, accentSoft, text, textMuted, chipBg, chipText } = theme;
 
   return (
     <>
       {insight.subtitle ? <Text style={styles.subtitle}>{insight.subtitle}</Text> : null}
 
       {insight.narrative ? (
-        <View style={styles.narrativeBlock}>
-          <Text style={styles.narrative}>{insight.narrative}</Text>
+        <View style={[styles.narrativeBlock, { borderLeftColor: accent }]}>
+          <Text style={[styles.narrative, { color: text }]}>{insight.narrative}</Text>
         </View>
       ) : null}
 
@@ -35,32 +39,53 @@ export function SnackInsightSections({ insight, onSelectQuestion }: Props) {
         <InsightSection title="零食档案">
           <View style={styles.metaGrid}>
             {snack.brand ? (
-              <MetaRow label="品牌" value={snack.brand} />
+              <MetaRow label="品牌" value={snack.brand} labelColor={textMuted} valueColor={text} />
             ) : null}
             {snack.product_name ? (
-              <MetaRow label="产品" value={snack.product_name} />
+              <MetaRow label="产品" value={snack.product_name} labelColor={textMuted} valueColor={text} />
             ) : null}
             {snack.snack_type ? (
-              <MetaRow label="品类" value={snack.snack_type} />
+              <MetaRow label="品类" value={snack.snack_type} labelColor={textMuted} valueColor={text} />
             ) : null}
             {snack.calories_estimate ? (
-              <MetaRow label="热量" value={snack.calories_estimate} />
+              <MetaRow
+                label="热量"
+                value={snack.calories_estimate}
+                labelColor={textMuted}
+                valueColor={text}
+              />
             ) : null}
           </View>
           {snack.taste_tags && snack.taste_tags.length > 0 ? (
             <View style={styles.tagBlock}>
-              <Text style={styles.metaLabel}>口味标签</Text>
-              <TagList items={snack.taste_tags} />
+              <Text style={[styles.metaLabel, { color: textMuted }]}>
+                口味标签
+              </Text>
+              <TagList
+                items={snack.taste_tags}
+                accent={accent}
+                accentSoft={accentSoft}
+                textColor={accent}
+              />
             </View>
           ) : null}
           {snack.ingredients_highlight && snack.ingredients_highlight.length > 0 ? (
             <View style={styles.tagBlock}>
-              <Text style={styles.metaLabel}>配料亮点</Text>
-              <TagList items={snack.ingredients_highlight} />
+              <Text style={[styles.metaLabel, { color: textMuted }]}>
+                配料亮点
+              </Text>
+              <TagList
+                items={snack.ingredients_highlight}
+                accent={accent}
+                accentSoft={accentSoft}
+                textColor={accent}
+              />
             </View>
           ) : null}
           {snack.serving_tip ? (
-            <Text style={styles.servingTip}>💡 {snack.serving_tip}</Text>
+            <Text style={[styles.servingTip, { color: textMuted }]}>
+              💡 {snack.serving_tip}
+            </Text>
           ) : null}
         </InsightSection>
       ) : null}
@@ -72,8 +97,12 @@ export function SnackInsightSections({ insight, onSelectQuestion }: Props) {
               <View key={`${note.label}-${note.value}`} style={styles.flavorRow}>
                 <Text style={styles.flavorEmoji}>{note.emoji ?? '•'}</Text>
                 <View style={styles.flavorText}>
-                  <Text style={styles.flavorLabel}>{note.label}</Text>
-                  <Text style={styles.flavorValue}>{note.value}</Text>
+                  <Text style={[styles.flavorLabel, { color: textMuted }]}>
+                    {note.label}
+                  </Text>
+                  <Text style={[styles.flavorValue, { color: text }]}>
+                    {note.value}
+                  </Text>
                 </View>
               </View>
             ))}
@@ -85,7 +114,10 @@ export function SnackInsightSections({ insight, onSelectQuestion }: Props) {
       {allergens.length > 0 ? (
         <InsightSection title="过敏原提示">
           {allergens.map((item) => (
-            <Text key={`${item.category}-${item.detail}`} style={styles.tipLine}>
+            <Text
+              key={`${item.category}-${item.detail}`}
+              style={[styles.tipLine, { color: text }]}
+            >
               {item.emoji ?? '⚠️'} {item.category}
               {item.detail ? ` — ${item.detail}` : ''}
             </Text>
@@ -96,7 +128,7 @@ export function SnackInsightSections({ insight, onSelectQuestion }: Props) {
       {snack?.caution_notes && snack.caution_notes.length > 0 ? (
         <InsightSection title="食用注意">
           {snack.caution_notes.map((note) => (
-            <Text key={note} style={styles.tipLine}>
+            <Text key={note} style={[styles.tipLine, { color: text }]}>
               • {note}
             </Text>
           ))}
@@ -105,13 +137,17 @@ export function SnackInsightSections({ insight, onSelectQuestion }: Props) {
 
       {insight.context.practical ? (
         <InsightSection title="食用提示">
-          <Text style={styles.bodyText}>{insight.context.practical}</Text>
+          <Text style={[styles.bodyText, { color: text }]}>
+            {insight.context.practical}
+          </Text>
         </InsightSection>
       ) : null}
 
       {insight.context.cultural ? (
         <InsightSection title="零食文化">
-          <Text style={styles.bodyText}>{insight.context.cultural}</Text>
+          <Text style={[styles.bodyText, { color: text }]}>
+            {insight.context.cultural}
+          </Text>
         </InsightSection>
       ) : null}
 
@@ -120,8 +156,14 @@ export function SnackInsightSections({ insight, onSelectQuestion }: Props) {
           <View style={styles.nearbyList}>
             {insight.nearby_picks.map((pick) => (
               <View key={pick.name} style={styles.nearbyCard}>
-                <Text style={styles.nearbyName}>📍 {pick.name}</Text>
-                {pick.blurb ? <Text style={styles.nearbyBlurb}>{pick.blurb}</Text> : null}
+                <Text style={[styles.nearbyName, { color: text }]}>
+                  📍 {pick.name}
+                </Text>
+                {pick.blurb ? (
+                  <Text style={[styles.nearbyBlurb, { color: textMuted }]}>
+                    {pick.blurb}
+                  </Text>
+                ) : null}
               </View>
             ))}
           </View>
@@ -133,14 +175,28 @@ export function SnackInsightSections({ insight, onSelectQuestion }: Props) {
         <View style={styles.exploreBlock}>
           {exploreChips.culinary.length > 0 ? (
             <View style={styles.exploreGroup}>
-              <Text style={styles.exploreTitle}>继续拆零食</Text>
-              <ChipRow items={exploreChips.culinary} onPress={onSelectQuestion} />
+              <Text style={[styles.exploreTitle, { color: textMuted }]}>
+                继续拆零食
+              </Text>
+              <ChipRow
+                items={exploreChips.culinary}
+                onPress={onSelectQuestion}
+                chipBg={chipBg}
+                chipText={chipText}
+              />
             </View>
           ) : null}
           {exploreChips.nearby.length > 0 ? (
             <View style={styles.exploreGroup}>
-              <Text style={styles.exploreTitle}>附近购买</Text>
-              <ChipRow items={exploreChips.nearby} onPress={onSelectQuestion} />
+              <Text style={[styles.exploreTitle, { color: textMuted }]}>
+                附近购买
+              </Text>
+              <ChipRow
+                items={exploreChips.nearby}
+                onPress={onSelectQuestion}
+                chipBg={chipBg}
+                chipText={chipText}
+              />
             </View>
           ) : null}
         </View>
@@ -150,11 +206,21 @@ export function SnackInsightSections({ insight, onSelectQuestion }: Props) {
 }
 
 /** 档案区键值行：左 label、右 value */
-function MetaRow({ label, value }: { label: string; value: string }) {
+function MetaRow({
+  label,
+  value,
+  labelColor,
+  valueColor,
+}: {
+  label: string;
+  value: string;
+  labelColor?: string;
+  valueColor?: string;
+}) {
   return (
     <View style={styles.metaRow}>
-      <Text style={styles.metaLabel}>{label}</Text>
-      <Text style={styles.metaValue}>{value}</Text>
+      <Text style={[styles.metaLabel, labelColor ? { color: labelColor } : null]}>{label}</Text>
+      <Text style={[styles.metaValue, valueColor ? { color: valueColor } : null]}>{value}</Text>
     </View>
   );
 }

@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import type { AgentTheme } from '@/constants/agentThemes';
 import { useSpeechInput } from '@/hooks/useSpeechInput';
 import { colors, radius, spacing, typography } from '@/theme';
 
@@ -25,6 +26,8 @@ interface InsightInputBarProps {
   placeholder?: string;
   locale?: string;
   keyboardInset?: number;
+  /** 智能体主题：输入壳 / 发送钮 / 文字色 */
+  theme?: AgentTheme;
 }
 
 export type InsightInputBarHandle = {
@@ -42,12 +45,22 @@ export const InsightInputBar = forwardRef<InsightInputBarHandle, InsightInputBar
       placeholder = '有什么想问的尽管说…',
       locale = 'zh-CN',
       keyboardInset = 0,
+      theme,
     },
     ref,
   ) {
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
   const keyboardVisible = keyboardInset > 0;
+
+  const shellBg = theme?.inputShell ?? colors.surface;
+  const borderColor = theme?.border ?? colors.border;
+  const textColor = theme?.inputText ?? colors.text;
+  const placeholderColor = theme?.inputPlaceholder ?? colors.textMuted;
+  const sendBg = theme?.sendBtn ?? colors.accent;
+  const sendText = theme?.sendBtnText ?? colors.text;
+  const dockBg = theme?.dockBg ?? colors.bg;
+  const accent = theme?.accent ?? colors.accent;
 
   useImperativeHandle(ref, () => ({
     focus: () => {
@@ -81,16 +94,23 @@ export const InsightInputBar = forwardRef<InsightInputBarHandle, InsightInputBar
           paddingBottom: keyboardVisible
             ? spacing.sm
             : Math.max(insets.bottom, spacing.sm),
+          backgroundColor: dockBg,
+          borderTopColor: borderColor,
         },
       ]}
     >
-      <View style={styles.inputShell}>
+      <View
+        style={[
+          styles.inputShell,
+          { backgroundColor: shellBg, borderColor },
+        ]}
+      >
         <Pressable style={styles.inputPressable} onPress={() => inputRef.current?.focus()}>
           <TextInput
             ref={inputRef}
-            style={styles.input}
+            style={[styles.input, { color: textColor }]}
             placeholder={placeholder}
-            placeholderTextColor={colors.textMuted}
+            placeholderTextColor={placeholderColor}
             value={value}
             onChangeText={onChangeText}
             onSubmitEditing={handleSubmit}
@@ -106,7 +126,11 @@ export const InsightInputBar = forwardRef<InsightInputBarHandle, InsightInputBar
         </Pressable>
         {voiceAvailable ? (
           <TouchableOpacity
-            style={[styles.iconBtn, listening && styles.iconBtnActive]}
+            style={[
+              styles.iconBtn,
+              { backgroundColor: theme?.surfaceElevated ?? colors.surfaceElevated },
+              listening && styles.iconBtnActive,
+            ]}
             onPress={startListening}
             disabled={loading}
             accessibilityLabel={listening ? '停止语音输入' : '语音输入'}
@@ -115,19 +139,25 @@ export const InsightInputBar = forwardRef<InsightInputBarHandle, InsightInputBar
           </TouchableOpacity>
         ) : null}
         <TouchableOpacity
-          style={[styles.sendBtn, (loading || !value.trim()) && styles.sendBtnDisabled]}
+          style={[
+            styles.sendBtn,
+            { backgroundColor: sendBg },
+            (loading || !value.trim()) && styles.sendBtnDisabled,
+          ]}
           onPress={handleSubmit}
           disabled={loading || !value.trim()}
           accessibilityLabel="发送"
         >
           {loading ? (
-            <ActivityIndicator color={colors.text} size="small" />
+            <ActivityIndicator color={sendText} size="small" />
           ) : (
-            <Text style={styles.sendText}>↑</Text>
+            <Text style={[styles.sendText, { color: sendText }]}>↑</Text>
           )}
         </TouchableOpacity>
       </View>
-      {listening ? <Text style={styles.listeningHint}>正在聆听…</Text> : null}
+      {listening ? (
+        <Text style={[styles.listeningHint, { color: accent }]}>正在聆听…</Text>
+      ) : null}
     </View>
   );
   },

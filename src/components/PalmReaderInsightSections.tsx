@@ -10,6 +10,7 @@ import {
 
 import { ChipRow } from '@/components/InsightCard';
 import { PalmLineOverlay } from '@/components/PalmLineOverlay';
+import type { AgentTheme } from '@/constants/agentThemes';
 import { lightColors, radius, spacing, typography } from '@/theme';
 import type { PalmLine, StructuredInsight } from '@/types/insight';
 
@@ -19,6 +20,7 @@ type Props = {
   onSelectQuestion: (question: string) => void;
   onScrollToBottom?: () => void;
   onOpenFullImage?: () => void;
+  theme: AgentTheme;
 };
 
 const LINE_ORDER = ['heart', 'head', 'life', 'career'] as const;
@@ -92,7 +94,9 @@ export function PalmReaderInsightSections({
   onSelectQuestion,
   onScrollToBottom,
   onOpenFullImage,
+  theme,
 }: Props) {
+  const { chipBg, chipText } = theme;
   const palm = insight.palm_reading;
   const traits =
     palm?.summary_traits && palm.summary_traits.length > 0
@@ -262,7 +266,12 @@ export function PalmReaderInsightSections({
       {chips.length > 0 ? (
         <View style={styles.chipSection}>
           <Text style={styles.sectionTitle}>继续探索</Text>
-          <ChipRow items={chips} onPress={onSelectQuestion} />
+          <ChipRow
+            items={chips}
+            onPress={onSelectQuestion}
+            chipBg={chipBg}
+            chipText={chipText}
+          />
         </View>
       ) : null}
     </View>

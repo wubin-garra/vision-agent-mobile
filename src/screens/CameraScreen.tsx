@@ -17,7 +17,10 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnalysisThinkingOverlay } from '@/components/AnalysisThinkingOverlay';
+import {
+  AnalysisThinkingOverlay,
+  type ThinkingVariant,
+} from '@/components/AnalysisThinkingOverlay';
 import { BirthdayCollectSheet } from '@/components/BirthdayCollectSheet';
 import { CreditsBadge } from '@/components/CreditsBadge';
 import { API_BASE_URL, API_MISCONFIGURED, AGENT_LABELS, formatApiError } from '@/constants/config';
@@ -26,6 +29,7 @@ import { AgentModeCarousel } from '@/components/AgentModeCarousel';
 import { CameraScanFrame } from '@/components/CameraScanFrame';
 import { PalmCameraGuide } from '@/components/PalmCameraGuide';
 import { ZoomSelector } from '@/components/ZoomSelector';
+import { resolveThinkingPack } from '@/constants/analysisThinking';
 import { FOOD_SCAN_THINKING_STEP_DURATIONS_MS, FOOD_SCAN_THINKING_STEPS } from '@/constants/foodScanThinking';
 import {
   PALM_READER_THINKING_STEP_DURATIONS_MS,
@@ -38,6 +42,7 @@ import {
   findCameraMode,
   type CameraModeItem,
 } from '@/constants/cameraModes';
+import type { AgentId } from '@/types/insight';
 import { useNativeCameraZoom } from '@/hooks/useNativeCameraZoom';
 import { analyzeImageStream } from '@/services/api';
 import { track } from '@/services/analytics';
@@ -85,17 +90,14 @@ export function CameraScreen() {
   } | null>(null);
   const { selectedAgent, setSelectedAgent, birthday, setBirthday } = useSessionStore();
   const activeMode = findCameraMode(agentToCameraMode(selectedAgent));
-  const isFoodScanMode = selectedAgent === 'food_scan';
   const isPalmReaderMode = selectedAgent === 'palm_reader';
-  const isRichThinkingMode = isFoodScanMode || isPalmReaderMode;
+  const thinkingVariant = resolveThinkingVariant(selectedAgent);
 
+  // 分析中本地推进思考步骤，填满上传→返回结果之间的等待感
   useEffect(() => {
-    if (!analyzing || !isRichThinkingMode) return;
+    if (!analyzing) return;
 
-    const steps = isPalmReaderMode ? PALM_READER_THINKING_STEPS : FOOD_SCAN_THINKING_STEPS;
-    const durations = isPalmReaderMode
-      ? PALM_READER_THINKING_STEP_DURATIONS_MS
-      : FOOD_SCAN_THINKING_STEP_DURATIONS_MS;
+    const { steps, durations } = resolveThinkingSchedule(thinkingVariant);
 
     let stepIndex = 0;
     let cancelled = false;
@@ -129,7 +131,7 @@ export function CameraScreen() {
       cancelled = true;
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [analyzing, isPalmReaderMode, isRichThinkingMode]);
+  }, [analyzing, thinkingVariant]);
 
   const runAnalyze = async (
     uri: string,
@@ -148,7 +150,7 @@ export function CameraScreen() {
     setPreviewUri(uri);
     setLastPhoto(uri);
     setAnalyzing(true);
-    setStatus(isPalmReaderMode ? '正在上传掌心照片…' : '正在上传图片…');
+    setStatus(statusForStage('uploading', thinkingVariant));
     setAnalyzeStage('uploading');
     setThinkingStep(undefined);
     thinkingStepsRef.current = [];
@@ -160,17 +162,10 @@ export function CameraScreen() {
         {
           onStatus: (stage) => {
             setAnalyzeStage(stage);
-            if (stage === 'uploading') {
-              setStatus(isPalmReaderMode ? '正在上传掌心照片…' : '正在上传图片…');
-            }
-            if (stage === 'routing') setStatus('正在选择智能体…');
-            if (stage === 'analyzing') {
-              setStatus(isPalmReaderMode ? '正在生成手相洞察…' : '正在生成营养报告…');
-            }
-            if (stage === 'captioning') setStatus('正在分析图像…');
+            setStatus(statusForStage(stage, thinkingVariant));
           },
           onThinking: () => {
-            // 步骤节奏由客户端 THINKING_STEP_DURATIONS_MS 控制
+            // 步骤节奏由客户端 durationsMs 控制
           },
           onPartial: (partial) => setStatus(`${partial.title} · ${partial.category}`),
         },
@@ -525,16 +520,68 @@ export function CameraScreen() {
         }}
       />
 
-      {analyzing && isRichThinkingMode ? (
+      {/* 所有镜头分析时都展示等待浮层，避免只剩快门转圈 */}
+      {analyzing ? (
         <AnalysisThinkingOverlay
           imageUri={previewUri}
           stage={analyzeStage}
           thinkingStep={thinkingStep}
-          variant={isPalmReaderMode ? 'palm_reader' : 'food_scan'}
+          variant={thinkingVariant}
         />
       ) : null}
     </View>
   );
+}
+
+function resolveThinkingVariant(agent: AgentId | null): ThinkingVariant {
+  if (agent === 'food_scan') return 'food_scan';
+  if (agent === 'palm_reader') return 'palm_reader';
+  if (agent === 'food_explorer') return 'snack';
+  if (agent === 'menu_translator') return 'menu_translator';
+  return 'general';
+}
+
+function resolveThinkingSchedule(variant: ThinkingVariant): {
+  steps: string[];
+  durations: number[];
+} {
+  if (variant === 'palm_reader') {
+    return {
+      steps: PALM_READER_THINKING_STEPS,
+      durations: PALM_READER_THINKING_STEP_DURATIONS_MS,
+    };
+  }
+  if (variant === 'food_scan') {
+    return {
+      steps: FOOD_SCAN_THINKING_STEPS,
+      durations: FOOD_SCAN_THINKING_STEP_DURATIONS_MS,
+    };
+  }
+  const pack = resolveThinkingPack(variant);
+  return { steps: pack.steps, durations: pack.durationsMs };
+}
+
+function statusForStage(stage: string, variant: ThinkingVariant): string {
+  const pack =
+    variant === 'food_scan' || variant === 'palm_reader'
+      ? null
+      : resolveThinkingPack(variant);
+  const phrases = pack?.stagePhrases[stage] ?? pack?.stagePhrases.default;
+  if (phrases?.[0]) return phrases[0];
+
+  if (variant === 'palm_reader') {
+    if (stage === 'uploading') return '正在上传掌心照片…';
+    if (stage === 'analyzing') return '正在生成手相洞察…';
+  }
+  if (variant === 'food_scan') {
+    if (stage === 'uploading') return '正在上传餐食照片…';
+    if (stage === 'analyzing') return '正在生成营养报告…';
+  }
+  if (stage === 'uploading') return '正在上传图片…';
+  if (stage === 'routing') return '正在选择智能体…';
+  if (stage === 'captioning') return '正在分析图像…';
+  if (stage === 'analyzing') return '正在生成洞察…';
+  return '正在分析…';
 }
 
 const styles = StyleSheet.create({

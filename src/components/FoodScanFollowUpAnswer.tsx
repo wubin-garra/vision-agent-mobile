@@ -1,5 +1,6 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+import type { AgentTheme } from '@/constants/agentThemes';
 import { lightColors, radius, spacing, typography } from '@/theme';
 import type {
   FollowUpMetricSlider,
@@ -10,7 +11,8 @@ import type {
 type Props = {
   answer: StructuredFollowUpAnswer;
   onSelectQuestion?: (question: string) => void;
-  agentTag?: string;
+  /** 智能体主题：品牌行文案 + chip 色 */
+  theme: AgentTheme;
 };
 
 /** 饱腹感 / 热量密度等对比滑条 */
@@ -106,11 +108,12 @@ function TipsBlock({ section }: { section: FollowUpSection }) {
 export function FoodScanFollowUpAnswer({
   answer,
   onSelectQuestion,
-  agentTag = '与食识拍一起看见 ›',
+  theme,
 }: Props) {
+  const { togetherLabel, chipBg, chipText } = theme;
   return (
     <View style={styles.wrap}>
-      <Text style={styles.agentTag}>{agentTag}</Text>
+      <Text style={[styles.agentTag, { color: chipText }]}>{togetherLabel}</Text>
 
       <View style={styles.summaryCard}>
         <Text style={styles.summary}>{answer.summary}</Text>
@@ -157,11 +160,16 @@ export function FoodScanFollowUpAnswer({
             <TouchableOpacity
               key={question}
               activeOpacity={0.7}
-              style={styles.suggestionRow}
+              style={[
+                styles.suggestionRow,
+                { backgroundColor: chipBg, borderColor: 'transparent' },
+              ]}
               onPress={() => onSelectQuestion?.(question)}
             >
-              <Text style={styles.suggestionText}>✦ {question}</Text>
-              <Text style={styles.suggestionArrow}>›</Text>
+              <Text style={[styles.suggestionText, { color: chipText }]}>
+                ✦ {question}
+              </Text>
+              <Text style={[styles.suggestionArrow, { color: chipText }]}>›</Text>
             </TouchableOpacity>
           ))}
         </View>

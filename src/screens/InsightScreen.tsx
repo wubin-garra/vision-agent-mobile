@@ -29,6 +29,7 @@ import { PalmReaderInsightSections } from '@/components/PalmReaderInsightSection
 import { PalmReaderThinkingSheet } from '@/components/PalmReaderThinkingSheet';
 import { SharePosterCard, type PosterData } from '@/components/SharePosterCard';
 import { SnackInsightSections } from '@/components/SnackInsightSections';
+import { getAgentTheme } from '@/constants/agentThemes';
 import { AGENT_LABELS } from '@/constants/config';
 import { useKeyboardInset } from '@/hooks/useKeyboardInset';
 import { buildPosterData, followUp, getMemory, mapFollowUpsToQA, requestSharePoster } from '@/services/api';
@@ -127,12 +128,13 @@ export function InsightScreen({ navigation, route }: Props) {
     };
   }, [memoryId]);
 
+  const theme = getAgentTheme(agentId);
   const isFoodScan = agentId === 'food_scan';
   const isPalmReader = agentId === 'palm_reader';
   // food_explorer 产品名「零食分析」；menu_translator「翻译师」
   const isSnack = agentId === 'food_explorer';
   const isMenuTranslator = agentId === 'menu_translator';
-  const isLightInsight = isFoodScan || isPalmReader;
+  const isLightInsight = theme.light;
   const isStructuredFollowUp = isFoodScan || isPalmReader;
   // 有专项字段才进专属 UI，否则回退通用线索列表（兼容旧 memory）
   const isSnackStyle =
@@ -270,22 +272,36 @@ export function InsightScreen({ navigation, route }: Props) {
 
   return (
     <SafeAreaView
-      style={[
-        styles.root,
-        isLightInsight && styles.rootLight,
-        isPalmReader && styles.rootPalm,
-      ]}
+      style={[styles.root, { backgroundColor: theme.bg }]}
       edges={['top']}
     >
+      {/* 顶部色条：一眼区分智能体 */}
+      <View style={[styles.accentStrip, { backgroundColor: theme.accent }]} />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={[styles.back, isLightInsight && styles.backLight]}>返回</Text>
+          <Text
+            style={[
+              styles.back,
+              isLightInsight ? styles.backLight : null,
+              { color: theme.headerLink },
+            ]}
+          >
+            返回
+          </Text>
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, isLightInsight && styles.headerTitleLight]}>
+        <Text style={[styles.headerTitle, { color: theme.text }]}>
           {AGENT_LABELS[agentId] ?? '洞察'}
         </Text>
         <TouchableOpacity onPress={sharePoster}>
-          <Text style={[styles.share, isLightInsight && styles.shareLight]}>分享名片</Text>
+          <Text
+            style={[
+              styles.share,
+              isLightInsight ? styles.shareLight : null,
+              { color: theme.headerLink },
+            ]}
+          >
+            分享名片
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -330,13 +346,15 @@ export function InsightScreen({ navigation, route }: Props) {
               onPress={() => setThinkingVisible(true)}
               style={styles.agentTagBtn}
             >
-              <Text style={styles.agentTag}>
-                {isPalmReader ? '与手相师一起看见 ›' : '与食识拍一起看见 ›'}
+              <Text style={[styles.agentTag, { color: theme.accent }]}>
+                {theme.togetherLabel}
               </Text>
             </TouchableOpacity>
-            <Text style={styles.foodScanTitle}>{insight.title}</Text>
+            <Text style={[styles.foodScanTitle, { color: theme.text }]}>{insight.title}</Text>
             {insight.narrative ? (
-              <Text style={styles.foodScanNarrative}>{insight.narrative}</Text>
+              <Text style={[styles.foodScanNarrative, { color: theme.textMuted }]}>
+                {insight.narrative}
+              </Text>
             ) : null}
           </View>
         ) : null}
@@ -347,22 +365,28 @@ export function InsightScreen({ navigation, route }: Props) {
               insight={insight}
               onSelectQuestion={prefillQuestion}
               onScrollToBottom={scrollToBottom}
+              theme={theme}
             />
-            <Text style={styles.disclaimerLight}>{insight.disclaimer}</Text>
+            <Text style={[styles.disclaimerLight, { color: theme.textMuted }]}>
+              {insight.disclaimer}
+            </Text>
           </View>
         ) : isPalmReader ? (
           <View style={styles.foodScanBody}>
             <PalmReaderInsightSections
               insight={insight}
-              imageUri={imageUri}
               onSelectQuestion={prefillQuestion}
               onScrollToBottom={scrollToBottom}
+              imageUri={imageUri}
               onOpenFullImage={() => {
                 hapticLight();
                 setFullImageVisible(true);
               }}
+              theme={theme}
             />
-            <Text style={styles.disclaimerLight}>{insight.disclaimer}</Text>
+            <Text style={[styles.disclaimerLight, { color: theme.textMuted }]}>
+              {insight.disclaimer}
+            </Text>
           </View>
         ) : (
         <InsightCard
@@ -370,21 +394,29 @@ export function InsightScreen({ navigation, route }: Props) {
           category={insight.category}
           confidence={insight.confidence}
           light={false}
+          accent={theme.accent}
+          accentSoft={theme.accentSoft}
+          gradientColors={theme.cardGradient}
         >
           {/* 零食 / 翻译师优先专属区块；其余 Agent 走通用线索 UI */}
           {isSnackStyle ? (
-            <SnackInsightSections insight={insight} onSelectQuestion={prefillQuestion} />
+            <SnackInsightSections
+              insight={insight}
+              onSelectQuestion={prefillQuestion}
+              theme={theme}
+            />
           ) : isMenuStyle ? (
             <MenuTranslatorInsightSections
               insight={insight}
               onSelectQuestion={prefillQuestion}
+              theme={theme}
             />
           ) : (
             <>
               {insight.visible_clues.length > 0 && (
                 <InsightSection title="可见线索">
                   {insight.visible_clues.map((clue) => (
-                    <Text key={clue} style={styles.bodyText}>
+                    <Text key={clue} style={[styles.bodyText, { color: theme.text }]}>
                       • {clue}
                     </Text>
                   ))}
@@ -393,60 +425,100 @@ export function InsightScreen({ navigation, route }: Props) {
 
               {contextBlocks.map((block) => (
                 <InsightSection key={block.label} title={block.label}>
-                  <Text style={styles.bodyText}>{block.value}</Text>
+                  <Text style={[styles.bodyText, { color: theme.text }]}>{block.value}</Text>
                 </InsightSection>
               ))}
 
               {insight.style_vocabulary.length > 0 && (
                 <InsightSection title="风格词汇">
-                  <TagList items={insight.style_vocabulary} />
+                  <TagList
+                    items={insight.style_vocabulary}
+                    accent={theme.accent}
+                    accentSoft={theme.accentSoft}
+                    textColor={theme.accent}
+                  />
                 </InsightSection>
               )}
 
               {insight.suggested_searches.length > 0 && (
                 <InsightSection title="推荐搜索">
-                  <TagList items={insight.suggested_searches} />
+                  <TagList
+                    items={insight.suggested_searches}
+                    accent={theme.accent}
+                    accentSoft={theme.accentSoft}
+                    textColor={theme.accent}
+                  />
                 </InsightSection>
               )}
             </>
           )}
 
-          <Text style={styles.disclaimer}>{insight.disclaimer}</Text>
+          <Text style={[styles.disclaimer, { color: theme.textMuted }]}>
+            {insight.disclaimer}
+          </Text>
         </InsightCard>
         )}
 
         {!isLightInsight ? (
           <View style={styles.actions}>
-            <TouchableOpacity style={styles.actionBtn} onPress={speakInsight}>
-              <Text style={styles.actionBtnText}>{speaking ? '停止播报' : '语音播报'}</Text>
+            <TouchableOpacity
+              style={[
+                styles.actionBtn,
+                {
+                  backgroundColor: theme.surfaceElevated,
+                  borderColor: theme.border,
+                },
+              ]}
+              onPress={speakInsight}
+            >
+              <Text style={[styles.actionBtnText, { color: theme.text }]}>
+                {speaking ? '停止播报' : '语音播报'}
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionBtnPrimary} onPress={sharePoster}>
-              <Text style={styles.actionBtnPrimaryText}>生成分享名片</Text>
+            <TouchableOpacity
+              style={[styles.actionBtnPrimary, { backgroundColor: theme.primaryBtn }]}
+              onPress={sharePoster}
+            >
+              <Text style={[styles.actionBtnPrimaryText, { color: theme.primaryBtnText }]}>
+                生成分享名片
+              </Text>
             </TouchableOpacity>
           </View>
         ) : null}
 
         {historyLoading ? (
           <View style={styles.historyLoading}>
-            <ActivityIndicator color={colors.accent} size="small" />
-            <Text style={styles.historyLoadingText}>加载追问记录…</Text>
+            <ActivityIndicator color={theme.accent} size="small" />
+            <Text style={[styles.historyLoadingText, { color: theme.textMuted }]}>
+              加载追问记录…
+            </Text>
           </View>
         ) : null}
 
         {qaList.length > 0 && (
           <View style={[styles.qaBlock, isLightInsight && styles.qaBlockLight]}>
-            {!isLightInsight ? <Text style={styles.qaTitle}>追问记录</Text> : null}
+            {!isLightInsight ? (
+              <Text style={[styles.qaTitle, { color: theme.textMuted }]}>追问记录</Text>
+            ) : null}
             {qaList.map((item, index) => (
               <View
                 key={`${item.question}-${index}`}
                 style={[
                   styles.qaItem,
-                  isLightInsight && styles.qaItemLight,
+                  { borderBottomColor: theme.border },
                   index === qaList.length - 1 && styles.qaItemLast,
                 ]}
               >
-                <View style={[styles.userBubble, isLightInsight && styles.userBubbleLight]}>
-                  <Text style={[styles.userBubbleText, isLightInsight && styles.userBubbleTextLight]}>
+                <View
+                  style={[
+                    styles.userBubble,
+                    {
+                      backgroundColor: theme.bubbleBg,
+                      borderColor: theme.bubbleBorder,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.userBubbleText, { color: theme.bubbleText }]}>
                     {item.question}
                   </Text>
                 </View>
@@ -454,14 +526,10 @@ export function InsightScreen({ navigation, route }: Props) {
                   <FoodScanFollowUpAnswer
                     answer={item.structuredAnswer}
                     onSelectQuestion={prefillQuestion}
-                    agentTag={
-                      isPalmReader ? '与手相师一起看见 ›' : '与食识拍一起看见 ›'
-                    }
+                    theme={theme}
                   />
                 ) : (
-                  <Text style={[styles.qaAnswer, isLightInsight && styles.qaAnswerLight]}>
-                    {item.answer}
-                  </Text>
+                  <Text style={[styles.qaAnswer, { color: theme.text }]}>{item.answer}</Text>
                 )}
               </View>
             ))}
@@ -470,8 +538,8 @@ export function InsightScreen({ navigation, route }: Props) {
 
         {!hasGroupedChips && !isLightInsight && (
           <View style={styles.followupBlock}>
-            <Text style={styles.qaTitle}>继续探索</Text>
-            <ChipRow items={chips} onPress={prefillQuestion} />
+            <Text style={[styles.qaTitle, { color: theme.textMuted }]}>继续探索</Text>
+            <ChipRow items={chips} onPress={prefillQuestion} theme={theme} />
           </View>
         )}
         </ScrollView>
@@ -479,9 +547,7 @@ export function InsightScreen({ navigation, route }: Props) {
         <View
           style={[
             styles.inputDock,
-            { bottom: keyboardInset },
-            isLightInsight && styles.inputDockLight,
-            isPalmReader && styles.inputDockPalm,
+            { bottom: keyboardInset, backgroundColor: theme.dockBg },
           ]}
           onLayout={(event) => setInputBarHeight(event.nativeEvent.layout.height)}
         >
@@ -496,7 +562,16 @@ export function InsightScreen({ navigation, route }: Props) {
             onFocus={handleInputFocus}
             loading={loading}
             keyboardInset={keyboardInset}
-            placeholder={isPalmReader ? '有什么想问的尽管说…' : undefined}
+            theme={theme}
+            placeholder={
+              isPalmReader
+                ? '有什么想问的尽管说…'
+                : isSnack
+                  ? '想了解配料或热量？问我…'
+                  : isMenuTranslator
+                    ? '想按忌口筛选或再译详细？问我…'
+                    : undefined
+            }
           />
         </View>
       </View>
@@ -530,8 +605,10 @@ export function InsightScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  rootLight: { backgroundColor: lightColors.bg },
-  rootPalm: { backgroundColor: lightColors.surface },
+  accentStrip: {
+    height: 3,
+    width: '100%',
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -554,12 +631,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: colors.bg,
-  },
-  inputDockLight: {
-    backgroundColor: lightColors.bg,
-  },
-  inputDockPalm: {
-    backgroundColor: lightColors.surface,
   },
   image: {
     width: '100%',
