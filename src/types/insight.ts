@@ -101,6 +101,33 @@ export interface PalmReading {
   compatibility_teaser?: string | null;
 }
 
+export interface MenuDish {
+  original: string;
+  translation: string;
+  price?: string | null;
+  notes?: string | null;
+  tags?: string[];
+}
+
+export interface MenuTranslation {
+  source_language?: string;
+  target_language?: string;
+  dishes?: MenuDish[];
+  ordering_tips?: string[];
+  dietary_summary?: string | null;
+}
+
+export interface SnackAnalysis {
+  brand?: string | null;
+  product_name?: string | null;
+  snack_type?: string;
+  taste_tags?: string[];
+  ingredients_highlight?: string[];
+  caution_notes?: string[];
+  calories_estimate?: string | null;
+  serving_tip?: string | null;
+}
+
 export interface StructuredInsight {
   title: string;
   category: string;
@@ -123,6 +150,8 @@ export interface StructuredInsight {
   nutrition_tips?: NutritionTip[];
   diet_summary?: string | null;
   palm_reading?: PalmReading | null;
+  menu_translation?: MenuTranslation | null;
+  snack_analysis?: SnackAnalysis | null;
 }
 
 export interface AnalyzeResponse {

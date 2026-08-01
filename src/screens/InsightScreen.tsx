@@ -18,16 +18,17 @@ import * as Sharing from 'expo-sharing';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { FoodInsightSections } from '@/components/FoodInsightSections';
 import { FoodScanInsightSections } from '@/components/FoodScanInsightSections';
 import { FoodScanFollowUpAnswer } from '@/components/FoodScanFollowUpAnswer';
 import { FoodScanThinkingSheet } from '@/components/FoodScanThinkingSheet';
 import { FullImageViewer } from '@/components/FullImageViewer';
 import { ChipRow, InsightCard, InsightSection, TagList } from '@/components/InsightCard';
 import { InsightInputBar, type InsightInputBarHandle } from '@/components/InsightInputBar';
+import { MenuTranslatorInsightSections } from '@/components/MenuTranslatorInsightSections';
 import { PalmReaderInsightSections } from '@/components/PalmReaderInsightSections';
 import { PalmReaderThinkingSheet } from '@/components/PalmReaderThinkingSheet';
 import { SharePosterCard, type PosterData } from '@/components/SharePosterCard';
+import { SnackInsightSections } from '@/components/SnackInsightSections';
 import { AGENT_LABELS } from '@/constants/config';
 import { useKeyboardInset } from '@/hooks/useKeyboardInset';
 import { buildPosterData, followUp, getMemory, mapFollowUpsToQA, requestSharePoster } from '@/services/api';
@@ -128,14 +129,23 @@ export function InsightScreen({ navigation, route }: Props) {
 
   const isFoodScan = agentId === 'food_scan';
   const isPalmReader = agentId === 'palm_reader';
+  const isSnack = agentId === 'food_explorer';
+  const isMenuTranslator = agentId === 'menu_translator';
   const isLightInsight = isFoodScan || isPalmReader;
   const isStructuredFollowUp = isFoodScan || isPalmReader;
-  const isFoodStyle =
-    agentId === 'food_explorer' &&
+  const isSnackStyle =
+    isSnack &&
     Boolean(
-      insight.narrative ||
+      insight.snack_analysis ||
+        insight.narrative ||
         insight.flavor_notes?.length ||
-        insight.nearby_picks?.length ||
+        insight.explore_chips?.culinary?.length,
+    );
+  const isMenuStyle =
+    isMenuTranslator &&
+    Boolean(
+      insight.menu_translation?.dishes?.length ||
+        insight.narrative ||
         insight.explore_chips?.culinary?.length,
     );
 
@@ -359,8 +369,13 @@ export function InsightScreen({ navigation, route }: Props) {
           confidence={insight.confidence}
           light={false}
         >
-          {isFoodStyle ? (
-            <FoodInsightSections insight={insight} onSelectQuestion={prefillQuestion} />
+          {isSnackStyle ? (
+            <SnackInsightSections insight={insight} onSelectQuestion={prefillQuestion} />
+          ) : isMenuStyle ? (
+            <MenuTranslatorInsightSections
+              insight={insight}
+              onSelectQuestion={prefillQuestion}
+            />
           ) : (
             <>
               {insight.visible_clues.length > 0 && (
