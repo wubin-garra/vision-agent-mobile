@@ -129,10 +129,12 @@ export function InsightScreen({ navigation, route }: Props) {
 
   const isFoodScan = agentId === 'food_scan';
   const isPalmReader = agentId === 'palm_reader';
+  // food_explorer 产品名「零食分析」；menu_translator「翻译师」
   const isSnack = agentId === 'food_explorer';
   const isMenuTranslator = agentId === 'menu_translator';
   const isLightInsight = isFoodScan || isPalmReader;
   const isStructuredFollowUp = isFoodScan || isPalmReader;
+  // 有专项字段才进专属 UI，否则回退通用线索列表（兼容旧 memory）
   const isSnackStyle =
     isSnack &&
     Boolean(
@@ -369,6 +371,7 @@ export function InsightScreen({ navigation, route }: Props) {
           confidence={insight.confidence}
           light={false}
         >
+          {/* 零食 / 翻译师优先专属区块；其余 Agent 走通用线索 UI */}
           {isSnackStyle ? (
             <SnackInsightSections insight={insight} onSelectQuestion={prefillQuestion} />
           ) : isMenuStyle ? (

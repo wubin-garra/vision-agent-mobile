@@ -6,10 +6,15 @@ import type { StructuredInsight } from '@/types/insight';
 
 interface Props {
   insight: StructuredInsight;
+  /** 点击追问 chip 时回填输入框 */
   onSelectQuestion: (question: string) => void;
 }
 
-/** 零食分析：摘要卡 + 风味解构 + 过敏原/注意 */
+/**
+ * 零食分析（food_explorer）洞察区块。
+ * 核心数据：snack_analysis（档案）+ flavor_notes（风味）+ allergens（过敏原）。
+ * agent_id 仍为 food_explorer，与历史记忆兼容。
+ */
 export function SnackInsightSections({ insight, onSelectQuestion }: Props) {
   const snack = insight.snack_analysis;
   const exploreChips = insight.explore_chips;
@@ -25,6 +30,7 @@ export function SnackInsightSections({ insight, onSelectQuestion }: Props) {
         </View>
       ) : null}
 
+      {/* 结构化档案：品牌 / 品类 / 热量等一行一项 */}
       {snack ? (
         <InsightSection title="零食档案">
           <View style={styles.metaGrid}>
@@ -75,6 +81,7 @@ export function SnackInsightSections({ insight, onSelectQuestion }: Props) {
         </InsightSection>
       ) : null}
 
+      {/* allergens 与食识拍共用字段；零食侧重包装可见/可推断的过敏原 */}
       {allergens.length > 0 ? (
         <InsightSection title="过敏原提示">
           {allergens.map((item) => (
@@ -142,6 +149,7 @@ export function SnackInsightSections({ insight, onSelectQuestion }: Props) {
   );
 }
 
+/** 档案区键值行：左 label、右 value */
 function MetaRow({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.metaRow}>

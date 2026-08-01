@@ -6,10 +6,15 @@ import type { StructuredInsight } from '@/types/insight';
 
 interface Props {
   insight: StructuredInsight;
+  /** 点击追问 chip 时回填输入框 */
   onSelectQuestion: (question: string) => void;
 }
 
-/** 翻译师：原文/译文对照表 + 点餐提示 */
+/**
+ * 翻译师（menu_translator）洞察区块。
+ * 核心数据在 insight.menu_translation：dishes 原文/译文对照 + ordering_tips。
+ * 若无 dishes，InsightScreen 会回退到通用线索列表。
+ */
 export function MenuTranslatorInsightSections({ insight, onSelectQuestion }: Props) {
   const menu = insight.menu_translation;
   const dishes = menu?.dishes ?? [];
@@ -18,6 +23,7 @@ export function MenuTranslatorInsightSections({ insight, onSelectQuestion }: Pro
 
   return (
     <>
+      {/* subtitle 一般为「源语言 → 目标语言」 */}
       {insight.subtitle ? <Text style={styles.subtitle}>{insight.subtitle}</Text> : null}
 
       {insight.narrative ? (
@@ -26,6 +32,7 @@ export function MenuTranslatorInsightSections({ insight, onSelectQuestion }: Pro
         </View>
       ) : null}
 
+      {/* 主内容：逐条菜品对照（原文弱化、译文突出） */}
       {dishes.length > 0 ? (
         <InsightSection title="菜单对照">
           <View style={styles.dishList}>
@@ -71,6 +78,7 @@ export function MenuTranslatorInsightSections({ insight, onSelectQuestion }: Pro
         </InsightSection>
       ) : null}
 
+      {/* 有结构化 tips 时不再重复展示 context.practical，避免文案重复 */}
       {insight.context.practical && !tips.length ? (
         <InsightSection title="实用建议">
           <Text style={styles.bodyText}>{insight.context.practical}</Text>
@@ -83,6 +91,7 @@ export function MenuTranslatorInsightSections({ insight, onSelectQuestion }: Pro
         </InsightSection>
       ) : null}
 
+      {/* 分组 chips 存在时，InsightScreen 会隐藏底部扁平「继续探索」 */}
       {exploreChips &&
       (exploreChips.culinary.length > 0 || exploreChips.nearby.length > 0) ? (
         <View style={styles.exploreBlock}>

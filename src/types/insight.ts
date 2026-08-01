@@ -101,22 +101,28 @@ export interface PalmReading {
   compatibility_teaser?: string | null;
 }
 
+/** 翻译师：单道菜/条目的原文译文对照 */
 export interface MenuDish {
   original: string;
   translation: string;
   price?: string | null;
+  /** 辣度、份量、主料等一句说明 */
   notes?: string | null;
+  /** 如「海鲜」「推荐」「素食友好」 */
   tags?: string[];
 }
 
+/** 翻译师结构化结果（insight.menu_translation） */
 export interface MenuTranslation {
   source_language?: string;
   target_language?: string;
   dishes?: MenuDish[];
   ordering_tips?: string[];
+  /** 忌口总览一句 */
   dietary_summary?: string | null;
 }
 
+/** 零食分析结构化结果（insight.snack_analysis）；agent_id 仍为 food_explorer */
 export interface SnackAnalysis {
   brand?: string | null;
   product_name?: string | null;
@@ -124,6 +130,7 @@ export interface SnackAnalysis {
   taste_tags?: string[];
   ingredients_highlight?: string[];
   caution_notes?: string[];
+  /** 如「约 140 kcal/30g（估算）」 */
   calories_estimate?: string | null;
   serving_tip?: string | null;
 }
@@ -150,7 +157,9 @@ export interface StructuredInsight {
   nutrition_tips?: NutritionTip[];
   diet_summary?: string | null;
   palm_reading?: PalmReading | null;
+  /** 翻译师专用；有 dishes 时走 MenuTranslatorInsightSections */
   menu_translation?: MenuTranslation | null;
+  /** 零食分析专用；有值时走 SnackInsightSections */
   snack_analysis?: SnackAnalysis | null;
 }
 
