@@ -93,9 +93,12 @@ File hint: stylist.png
 
 ### 7. `local_guide.png` — 本地向导 · circleBg `#DFF5E8`
 
+> 与 `sight_route` 强区分：**禁止折地图 / 路线虚线 / 多站点图钉**。本图标讲「这是哪儿」的地标故事，不是「怎么走」。
+
 ```text
 Circular disc color: soft mint green #DFF5E8 filling the circle.
-Motif on disc: folded paper map (cream / soft map greens / pale blue water) + small red location pin. Natural map colors on the green disc.
+Motif on disc (storytelling landmark — NOT a map): a soft 3D clay historic landmark as the hero — e.g. stone clock tower, temple gate, or classic monument plinth (warm stone / cream / soft terracotta accents). Beside it: ONE small speech bubble OR open pocket guidebook with abstract gray text bars (NO letters). Optional tiny warm lamp glow. Natural stone/paper colors on the mint disc.
+CRITICAL differentiators vs sight_route: NO folded tourist map, NO dashed route line, NO multi-color waypoint pins, NO trail arrows. One place + storytelling cue only.
 File hint: local_guide.png
 ```
 
@@ -137,15 +140,26 @@ File hint: med_label.png
 
 ### 13. `sight_route.png` — 景点路线 · circleBg `#DCECFF`
 
+> 与 `local_guide` 强区分：**必须有「有序路线」**（虚线路径 + 多个站点），不要单独地标建筑、不要讲故事气泡。
+
 ```text
-Circular disc color: soft sky blue #DCECFF. Motif: folded tourist map with a dotted route line and 2–3 pin dots. Natural paper map colors.
+Circular disc color: soft sky blue #DCECFF filling the circle.
+Motif on disc (ordered itinerary — NOT a landmark story): a soft 3D clay FOLDED tourist map or flat board with pale green land / light blue water patches, plus a CLEAR brown or charcoal DASHED route line connecting 3 waypoint markers in different colors (e.g. red → orange → blue) along the path. Optional tiny direction chevron on the dashed line. Natural paper map colors on the sky disc.
+CRITICAL differentiators vs local_guide: MUST show path + multiple stops; NO clock tower / temple / monument as the main subject; NO speech bubble; NO guidebook as hero.
 File hint: sight_route.png
 ```
 
 ### 14. `hotel_guide.png` — 酒店入住 · circleBg `#F5E6D8`
 
 ```text
-Circular disc color: soft sand #F5E6D8. Motif: hotel key card (plastic rectangle) with a tiny keyhole or stripe — NO readable text. Warm cream/beige card.
+Circular disc color: soft sand #F5E6D8 filling the circle.
+Motif (CRITICAL — must look like a HOTEL, not a shop/cafe):
+A miniature multi-story hotel building in soft clay 3D, clearly taller than wide (2–3 floors), with a hotel porte-cochère / entrance canopy (solid cream or soft taupe fabric — NOT red-white candy stripes, NOT bakery/cafe awning).
+Lobby entrance with glass revolving door or tall double doors, warm lobby glow inside.
+Hotel cues stacked for instant recognition: a small luggage cart (bellhop trolley) beside the door, a brass hotel bell on a stand, and a cream keycard with abstract crest in the foreground.
+Facade: cream/stone walls, evenly spaced windows on upper floors (hotel room rhythm), subtle brass accents.
+AVOID: single-story shopfront, candy-stripe awning, cafe tables, bakery look, generic house, bank columns, any readable letters including H/HOTEL.
+Natural warm materials; circle background only is #F5E6D8 — do not wash the building pink/red.
 File hint: hotel_guide.png
 ```
 
