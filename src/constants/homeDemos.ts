@@ -1,6 +1,4 @@
-import { Image } from 'react-native';
-
-import { AGENT_ICON_SOURCES, getAgentVisual } from '@/constants/agentAssets';
+import { getAgentVisual } from '@/constants/agentAssets';
 import { AGENT_LABELS } from '@/constants/config';
 import type { AgentId, StructuredInsight } from '@/types/insight';
 
@@ -10,26 +8,11 @@ export type HomeDemoItem = {
   title: string;
   subtitle: string;
   category: string;
-  /** 洞察页封面图（可用远程图；无网时仍可看结构化结果） */
+  /** 真实场景示意封面（不用智能体图标） */
   coverUri: string;
   insight: StructuredInsight;
   followupChips: string[];
 };
-
-function resolveIconUri(agentId: AgentId): string | null {
-  const source = AGENT_ICON_SOURCES[agentId];
-  if (!source) return null;
-  try {
-    return Image.resolveAssetSource(source)?.uri ?? null;
-  } catch {
-    return null;
-  }
-}
-
-/** 封面优先：本地图标 → 远程示意；保证 Insight 有可展示图 */
-function coverFor(agentId: AgentId, remote: string): string {
-  return resolveIconUri(agentId) ?? remote;
-}
 
 /** 出国旅游新镜头：主页可点开的本地 Demo（不依赖后端 memory） */
 export const travelHomeDemos: HomeDemoItem[] = [
@@ -39,10 +22,7 @@ export const travelHomeDemos: HomeDemoItem[] = [
     title: '布洛芬退烧止痛',
     subtitle: '药盒说明书 · 一眼看懂用法与禁忌',
     category: '药品说明',
-    coverUri: coverFor(
-      'med_label',
-      'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800&q=80',
-    ),
+    coverUri: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800&q=80',
     followupChips: ['有哪些禁忌人群？', '用法用量再说明一下', '旅行携带需要注意什么？'],
     insight: {
       title: '布洛芬退烧止痛',
@@ -84,10 +64,7 @@ export const travelHomeDemos: HomeDemoItem[] = [
     title: '旧城区半日路线',
     subtitle: '导览图 · 少走回头路的 3.5 小时线',
     category: '景点路线',
-    coverUri: coverFor(
-      'sight_route',
-      'https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?w=800&q=80',
-    ),
+    coverUri: 'https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?w=800&q=80',
     followupChips: ['附近还有什么值得去？', '下雨天怎么改路线？', '怎么买票最省事？'],
     insight: {
       title: '旧城区半日路线',
@@ -132,10 +109,7 @@ export const travelHomeDemos: HomeDemoItem[] = [
     title: '市中心酒店入住卡',
     subtitle: '确认单 · 确认号与到店步骤',
     category: '酒店入住',
-    coverUri: coverFor(
-      'hotel_guide',
-      'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80',
-    ),
+    coverUri: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80',
     followupChips: ['怎么跟前台用英语说明？', '行李能提前寄放吗？', '附近交通怎么走？'],
     insight: {
       title: '市中心酒店入住卡',
@@ -183,10 +157,7 @@ export const travelHomeDemos: HomeDemoItem[] = [
     title: 'CA983 上海→洛杉矶',
     subtitle: '登机牌 · 航班号、登机口与行程提示',
     category: '航班助手',
-    coverUri: coverFor(
-      'flight_info',
-      'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=800&q=80',
-    ),
+    coverUri: 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=800&q=80',
     followupChips: ['登机口怎么走？', '建议提前多久到机场？', '延误了怎么办？'],
     insight: {
       title: 'CA983 上海→洛杉矶',
