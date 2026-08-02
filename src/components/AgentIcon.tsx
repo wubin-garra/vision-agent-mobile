@@ -20,6 +20,16 @@ import {
  */
 export const AGENT_ICON_DISC_SCALE = 1.35;
 
+/** 个别图标圆盘已较满 / 主体偏大时，用更小放大倍数，避免裁得过近 */
+const AGENT_ICON_DISC_SCALE_OVERRIDE: Partial<Record<AgentAssetId, number>> = {
+  local_guide: 1.12,
+  sight_route: 1.12,
+};
+
+export function getAgentIconDiscScale(id: AgentAssetId): number {
+  return AGENT_ICON_DISC_SCALE_OVERRIDE[id] ?? AGENT_ICON_DISC_SCALE;
+}
+
 type Props = {
   id: AgentAssetId;
   /** 圆形容器边长；色圆会尽量铺满此尺寸 */
@@ -44,7 +54,7 @@ export function AgentIcon({
 }: Props) {
   const source = getAgentIconSource(id);
   if (source) {
-    const scale = fillDisc ? AGENT_ICON_DISC_SCALE : 1;
+    const scale = fillDisc ? getAgentIconDiscScale(id) : 1;
     const imgSize = Math.round(size * scale);
     const offset = Math.round((size - imgSize) / 2);
 

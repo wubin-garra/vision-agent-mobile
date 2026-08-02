@@ -98,6 +98,7 @@ File hint: stylist.png
 ```text
 Circular disc color: soft mint green #DFF5E8 filling the circle.
 Motif on disc (storytelling landmark — NOT a map): a soft 3D clay historic landmark as the hero — e.g. stone clock tower, temple gate, or classic monument plinth (warm stone / cream / soft terracotta accents). Beside it: ONE small speech bubble OR open pocket guidebook with abstract gray text bars (NO letters). Optional tiny warm lamp glow. Natural stone/paper colors on the mint disc.
+SIZE: motif group should occupy ~60–65% of the disc diameter; leave clear soft padding (~15–18% margin) from circle edge to object — do NOT fill the circle edge-to-edge.
 CRITICAL differentiators vs sight_route: NO folded tourist map, NO dashed route line, NO multi-color waypoint pins, NO trail arrows. One place + storytelling cue only.
 File hint: local_guide.png
 ```
@@ -145,6 +146,7 @@ File hint: med_label.png
 ```text
 Circular disc color: soft sky blue #DCECFF filling the circle.
 Motif on disc (ordered itinerary — NOT a landmark story): a soft 3D clay FOLDED tourist map or flat board with pale green land / light blue water patches, plus a CLEAR brown or charcoal DASHED route line connecting 3 waypoint markers in different colors (e.g. red → orange → blue) along the path. Optional tiny direction chevron on the dashed line. Natural paper map colors on the sky disc.
+SIZE: map motif should occupy ~60–65% of the disc diameter; leave clear soft padding (~15–18% margin) from circle edge to map corners — do NOT let pins or map edges touch the circle rim.
 CRITICAL differentiators vs local_guide: MUST show path + multiple stops; NO clock tower / temple / monument as the main subject; NO speech bubble; NO guidebook as hero.
 File hint: sight_route.png
 ```
