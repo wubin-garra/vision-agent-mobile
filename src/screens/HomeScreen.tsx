@@ -13,7 +13,15 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AgentIcon } from '@/components/AgentIcon';
+import { getAgentCircleBg, hasAgentIcon } from '@/constants/agentAssets';
 import { featuredPrompts, perspectives } from '@/constants/homeContent';
+import {
+  getDemoAgentLabel,
+  getDemoCoverColor,
+  travelHomeDemos,
+  type HomeDemoItem,
+} from '@/constants/homeDemos';
 import { listMemories } from '@/services/api';
 import { track } from '@/services/analytics';
 import { useSessionStore } from '@/store/session';
@@ -57,6 +65,21 @@ export function HomeScreen() {
     });
   };
 
+  const openDemo = (item: HomeDemoItem) => {
+    track('home_demo_open', {
+      demo_id: item.id,
+      agent: item.agentId,
+    });
+    navigation.navigate('Insight', {
+      memoryId: item.id,
+      imageUri: item.coverUri,
+      insight: item.insight,
+      followupChips: item.followupChips,
+      agentId: item.agentId,
+      entryMode: 'demo',
+    });
+  };
+
   const goCamera = (agentId?: MemoryItem['agent_id']) => {
     if (agentId) {
       setSelectedAgent(agentId);
@@ -97,8 +120,18 @@ export function HomeScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.perspectiveRow}>
             {perspectives.map((item) => (
               <TouchableOpacity key={item.id} style={styles.perspectiveItem} onPress={() => goCamera(item.id)}>
-                <View style={styles.perspectiveCircle}>
-                  <Text style={styles.perspectiveEmoji}>{item.emoji}</Text>
+                <View
+                  style={[
+                    styles.perspectiveCircle,
+                    {
+                      backgroundColor: hasAgentIcon(item.id)
+                        ? 'transparent'
+                        : getAgentCircleBg(item.id),
+                      borderColor: hasAgentIcon(item.id) ? 'transparent' : lightColors.border,
+                    },
+                  ]}
+                >
+                  <AgentIcon id={item.id} size={hasAgentIcon(item.id) ? 64 : 40} emojiSize={28} />
                   {item.isNew ? (
                     <View style={styles.newBadge}>
                       <Text style={styles.newBadgeText}>NEW</Text>
@@ -107,6 +140,48 @@ export function HomeScreen() {
                 </View>
                 <Text style={styles.perspectiveLabel} numberOfLines={1}>
                   {item.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* 出国旅行 Demo */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>出国旅行 · 示例</Text>
+            <TouchableOpacity onPress={() => goCamera('menu_translator')}>
+              <Text style={styles.sectionLink}>去拍照 ›</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.sectionHint}>点开看药品、路线、酒店、航班怎么解读</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.demoRow}
+          >
+            {travelHomeDemos.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.demoCard}
+                onPress={() => openDemo(item)}
+                activeOpacity={0.92}
+              >
+                <View style={[styles.demoCover, { backgroundColor: getDemoCoverColor(item.agentId) }]}>
+                  {item.coverUri.startsWith('http') ? (
+                    <Image source={{ uri: item.coverUri }} style={styles.demoCoverImage} />
+                  ) : (
+                    <AgentIcon id={item.agentId} size={72} emojiSize={36} />
+                  )}
+                  <View style={styles.demoAgentPill}>
+                    <Text style={styles.demoAgentPillText}>{getDemoAgentLabel(item.agentId)}</Text>
+                  </View>
+                </View>
+                <Text style={styles.demoTitle} numberOfLines={2}>
+                  {item.title}
+                </Text>
+                <Text style={styles.demoSubtitle} numberOfLines={2}>
+                  {item.subtitle}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -226,13 +301,10 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: lightColors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: lightColors.border,
   },
-  perspectiveEmoji: { fontSize: 28 },
   newBadge: {
     position: 'absolute',
     bottom: -2,
@@ -253,6 +325,56 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     textAlign: 'center',
     fontSize: 11,
+  },
+  sectionHint: {
+    ...typography.caption,
+    color: lightColors.textMuted,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.md,
+  },
+  demoRow: {
+    gap: spacing.md,
+    paddingRight: spacing.md,
+  },
+  demoCard: {
+    width: 168,
+  },
+  demoCover: {
+    width: 168,
+    height: 120,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  demoCoverImage: {
+    ...StyleSheet.absoluteFill,
+  },
+  demoAgentPill: {
+    position: 'absolute',
+    left: 8,
+    bottom: 8,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+  },
+  demoAgentPillText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FFF',
+  },
+  demoTitle: {
+    ...typography.subtitle,
+    fontSize: 14,
+    color: lightColors.text,
+    marginTop: spacing.sm,
+  },
+  demoSubtitle: {
+    ...typography.caption,
+    color: lightColors.textMuted,
+    marginTop: 2,
+    lineHeight: 16,
   },
   promptCard: {
     marginHorizontal: spacing.md,

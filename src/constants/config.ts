@@ -79,6 +79,10 @@ export const AGENT_LABELS: Record<string, string> = {
   palm_reader: '看手相师',
   text_reader: '文字解读',
   menu_translator: '翻译师',
+  med_label: '药品说明',
+  sight_route: '景点路线',
+  hotel_guide: '酒店入住',
+  flight_info: '航班助手',
   general_curiosity: '好奇心',
 };
 

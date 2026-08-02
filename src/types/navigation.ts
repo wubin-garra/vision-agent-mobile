@@ -15,8 +15,8 @@ export type RootStackParamList = {
     insight: StructuredInsight;
     followupChips: string[];
     agentId: AgentId;
-    /** 从日记/历史进入时置顶阅读；拍照分析后为 fresh */
-    entryMode?: 'history' | 'fresh';
+    /** 从日记/历史进入时置顶阅读；拍照分析后为 fresh；主页 Demo 为 demo */
+    entryMode?: 'history' | 'fresh' | 'demo';
     /** 食识拍 / 看手相师分析时的思考步骤（拍照流程传入，历史记录可缺省） */
     thinkingSteps?: string[];
   };

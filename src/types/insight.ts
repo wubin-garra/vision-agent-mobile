@@ -8,6 +8,10 @@ export type AgentId =
   | 'palm_reader'
   | 'text_reader'
   | 'menu_translator'
+  | 'med_label'
+  | 'sight_route'
+  | 'hotel_guide'
+  | 'flight_info'
   | 'general_curiosity';
 
 export interface InsightContext {
@@ -135,6 +139,72 @@ export interface SnackAnalysis {
   serving_tip?: string | null;
 }
 
+/** 药品说明（med_label） */
+export interface MedLabelReading {
+  drug_name?: string | null;
+  brand?: string | null;
+  active_ingredients?: string[];
+  usage?: string | null;
+  dosage?: string | null;
+  warnings?: string[];
+  storage?: string | null;
+  translated_summary?: string | null;
+  source_language?: string | null;
+}
+
+export interface SightHighlight {
+  name: string;
+  tip?: string;
+}
+
+/** 景点路线（sight_route） */
+export interface SightRoutePlan {
+  place_name?: string | null;
+  area?: string | null;
+  highlights?: SightHighlight[];
+  suggested_route?: string[];
+  duration_estimate?: string | null;
+  transport_tips?: string[];
+  best_time?: string | null;
+  ticket_notes?: string | null;
+}
+
+/** 酒店入住（hotel_guide） */
+export interface HotelGuide {
+  hotel_name?: string | null;
+  confirmation_code?: string | null;
+  guest_name?: string | null;
+  check_in?: string | null;
+  check_out?: string | null;
+  address?: string | null;
+  room_type?: string | null;
+  steps?: string[];
+  amenities_notes?: string[];
+  wifi_or_access?: string | null;
+  contact?: string | null;
+}
+
+export interface FlightLeg {
+  airport?: string | null;
+  time?: string | null;
+  terminal?: string | null;
+  gate?: string | null;
+}
+
+/** 航班 / 登机牌（flight_info） */
+export interface FlightInfo {
+  airline?: string | null;
+  flight_number?: string | null;
+  passenger?: string | null;
+  booking_ref?: string | null;
+  seat?: string | null;
+  cabin?: string | null;
+  departure?: FlightLeg | null;
+  arrival?: FlightLeg | null;
+  status_notes?: string | null;
+  timeline_tips?: string[];
+}
+
 export interface StructuredInsight {
   title: string;
   category: string;
@@ -161,6 +231,10 @@ export interface StructuredInsight {
   menu_translation?: MenuTranslation | null;
   /** 零食分析专用；有值时走 SnackInsightSections */
   snack_analysis?: SnackAnalysis | null;
+  med_label_reading?: MedLabelReading | null;
+  sight_route?: SightRoutePlan | null;
+  hotel_guide?: HotelGuide | null;
+  flight_info?: FlightInfo | null;
 }
 
 export interface AnalyzeResponse {

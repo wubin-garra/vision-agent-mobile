@@ -8,6 +8,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AgentIcon } from '@/components/AgentIcon';
+import { getAgentCircleBg, hasAgentIcon } from '@/constants/agentAssets';
 import type { CameraModeItem } from '@/constants/cameraModes';
 import { radius, spacing, typography } from '@/theme';
 import { hapticLight } from '@/utils/haptics';
@@ -39,8 +41,17 @@ export function AgentDetailSheet({ visible, mode, onClose, onTry }: Props) {
             <Text style={styles.closeText}>×</Text>
           </TouchableOpacity>
 
-          <View style={styles.avatarWrap}>
-            <Text style={styles.avatarEmoji}>{mode.emoji}</Text>
+          <View
+            style={[
+              styles.avatarWrap,
+              {
+                backgroundColor: hasAgentIcon(mode.id)
+                  ? 'transparent'
+                  : getAgentCircleBg(mode.id),
+              },
+            ]}
+          >
+            <AgentIcon id={mode.id} size={hasAgentIcon(mode.id) ? 88 : 64} emojiSize={42} />
           </View>
           <Text style={styles.title}>{mode.label}</Text>
           <Text style={styles.handleName}>@VisionAgent</Text>
@@ -103,13 +114,10 @@ const styles = StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: '#F2F2F7',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,
-  },
-  avatarEmoji: {
-    fontSize: 42,
+    overflow: 'hidden',
   },
   title: {
     ...typography.title,

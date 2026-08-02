@@ -153,6 +153,26 @@ export const AGENT_BRANDS: Record<AgentId, AgentBrand> = {
     accent: '#3DB8A8',
     togetherLabel: '与翻译师一起看见 ›',
   },
+  med_label: {
+    bg: '#100E12',
+    accent: '#F07178',
+    togetherLabel: '与药品说明一起看见 ›',
+  },
+  sight_route: {
+    bg: '#0C1214',
+    accent: '#4DA3FF',
+    togetherLabel: '与景点路线一起看见 ›',
+  },
+  hotel_guide: {
+    bg: '#12100E',
+    accent: '#D4A574',
+    togetherLabel: '与酒店入住一起看见 ›',
+  },
+  flight_info: {
+    bg: '#0A0E14',
+    accent: '#6B9FFF',
+    togetherLabel: '与航班助手一起看见 ›',
+  },
   stylist: {
     bg: '#120E12',
     accent: '#E87BA3',

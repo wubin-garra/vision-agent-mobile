@@ -40,18 +40,24 @@ import {
   cameraModeToAgent,
   cameraModes,
   findCameraMode,
+  orderCameraModes,
   type CameraModeItem,
 } from '@/constants/cameraModes';
 import type { AgentId } from '@/types/insight';
 import { useNativeCameraZoom } from '@/hooks/useNativeCameraZoom';
 import { analyzeImageStream } from '@/services/api';
 import { track } from '@/services/analytics';
+import { useFavoriteModesStore } from '@/store/favoriteModes';
 import { useSessionStore } from '@/store/session';
 import { colors, lightColors, radius, spacing, typography } from '@/theme';
 import type { RootStackParamList } from '@/types/navigation';
 import { getCurrentCoordinates } from '@/utils/location';
 import { cropCaptureToViewport, getCaptureCropRatio } from '@/utils/captureCrop';
-import { hapticLight, hapticMedium } from '@/utils/haptics';
+import { hapticLight, hapticMedium, hapticSelection } from '@/utils/haptics';
+
+/** 镜头名胶囊固定宽，避免切换时跳动 */
+const MODE_PILL_WIDTH = 176;
+const MODE_PILL_SIDE = 32;
 
 type StackNav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -89,9 +95,23 @@ export function CameraScreen() {
     source: 'camera' | 'gallery';
   } | null>(null);
   const { selectedAgent, setSelectedAgent, birthday, setBirthday } = useSessionStore();
+  const favoriteIds = useFavoriteModesStore((s) => s.favoriteIds);
+  const hydrateFavorites = useFavoriteModesStore((s) => s.hydrate);
+  const isFavorite = useFavoriteModesStore((s) => s.isFavorite);
+  const toggleFavorite = useFavoriteModesStore((s) => s.toggleFavorite);
   const activeMode = findCameraMode(agentToCameraMode(selectedAgent));
+  const orderedModes = useMemo(
+    () => orderCameraModes(cameraModes, favoriteIds),
+    [favoriteIds],
+  );
+  const activeFavorited = isFavorite(activeMode.id);
+  const canFavorite = activeMode.id !== 'auto';
   const isPalmReaderMode = selectedAgent === 'palm_reader';
   const thinkingVariant = resolveThinkingVariant(selectedAgent);
+
+  useEffect(() => {
+    void hydrateFavorites();
+  }, [hydrateFavorites]);
 
   // 分析中本地推进思考步骤，填满上传→返回结果之间的等待感
   useEffect(() => {
@@ -300,6 +320,16 @@ export function CameraScreen() {
     setDetailVisible(true);
   };
 
+  const onToggleFavorite = () => {
+    if (!canFavorite || analyzing) return;
+    hapticSelection();
+    toggleFavorite(activeMode.id);
+    track('camera_mode_favorite_toggle', {
+      mode_id: activeMode.id,
+      favorited: !activeFavorited,
+    });
+  };
+
   const pinchGesture = useMemo(
     () =>
       Gesture.Pinch()
@@ -437,20 +467,41 @@ export function CameraScreen() {
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.modePill, analyzing && styles.modePillDisabled]}
-            onPress={openDetail}
-            disabled={analyzing}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.modePillIcon}>🔖</Text>
+          <View style={[styles.modePill, analyzing && styles.modePillDisabled]}>
+            <TouchableOpacity
+              style={styles.modePillSide}
+              onPress={onToggleFavorite}
+              disabled={analyzing || !canFavorite}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel={activeFavorited ? '取消收藏镜头' : '收藏镜头'}
+            >
+              <Text
+                style={[
+                  styles.modePillFavIcon,
+                  activeFavorited && styles.modePillFavIconActive,
+                  !canFavorite && styles.modePillFavIconDisabled,
+                ]}
+              >
+                {activeFavorited ? '🏷️' : '🔖'}
+              </Text>
+            </TouchableOpacity>
             <Text style={styles.modePillText} numberOfLines={1}>
               {activeMode.label}
             </Text>
-            <View style={styles.modeInfoBtn}>
-              <Text style={styles.modeInfoText}>i</Text>
-            </View>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modePillSide}
+              onPress={openDetail}
+              disabled={analyzing}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel="镜头说明"
+            >
+              <View style={styles.modeInfoBtn}>
+                <Text style={styles.modeInfoText}>i</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
 
           <TouchableOpacity
             style={styles.flipBtn}
@@ -472,7 +523,7 @@ export function CameraScreen() {
         ) : null}
 
         <AgentModeCarousel
-          modes={cameraModes}
+          modes={orderedModes}
           selectedId={activeMode.id}
           onSelect={selectMode}
           disabled={analyzing}
@@ -721,24 +772,34 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   modePill: {
-    flexShrink: 1,
-    maxWidth: 168,
+    width: MODE_PILL_WIDTH,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: 'rgba(45, 45, 48, 0.88)',
     borderRadius: radius.full,
     marginHorizontal: spacing.sm,
-    paddingVertical: 11,
-    paddingHorizontal: 12,
-    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 6,
   },
   modePillDisabled: { opacity: 0.65 },
-  modePillIcon: {
+  modePillSide: {
+    width: MODE_PILL_SIDE,
+    height: MODE_PILL_SIDE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modePillFavIcon: {
     fontSize: 16,
+    opacity: 0.75,
+  },
+  modePillFavIconActive: {
+    opacity: 1,
+  },
+  modePillFavIconDisabled: {
+    opacity: 0.28,
   },
   modePillText: {
-    flexShrink: 1,
+    flex: 1,
     ...typography.subtitle,
     color: '#FFFFFF',
     fontSize: 14,

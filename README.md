@@ -6,7 +6,8 @@
 
 - 相机优先：拍照即分析，零输入
 - 多 Agent 路由：自动选择或手动切换专项智能体
-- 菜单：穿搭 / 食识拍 / 看手相师 / 零食分析 / 本地向导 / 翻译师 / 好奇心
+- 菜单：穿搭 / 食识拍 / 看手相师 / 零食分析 / 翻译师 / **药品说明 · 景点路线 · 酒店入住 · 航班助手** / 本地向导 / 好奇心
+- 出国旅游专项：药盒说明、景点路线规划、酒店入住凭证、机票登机牌
 - 结构化洞察卡片：线索、文化背景、风格词汇、搜索建议
 - 看手相师：掌纹虚线叠加 + 外侧淡引线标签
 - Visual Memory：历史分析画廊
@@ -121,10 +122,12 @@ android/app/build/outputs/apk/release/app-release.apk
 docs/               # 产品 / 埋点 / 食识拍
 src/
 ├── components/
-├── constants/          # 含 agentThemes.ts：各 Agent 主题唯一调色入口（AGENT_BRANDS）
+├── constants/          # agentThemes（色）/ agentAssets（图标 emoji）
 ├── screens/
 ├── services/
 ├── store/
-├── theme/              # 全局浅/深色基础色；Agent 专属色见 agentThemes
+├── theme/              # 全局浅/深色基础色
 └── types/
 ```
+
+Agent 图标生成提示词：`docs/agent-icon-prompts.md`；PNG 放入 `assets/agents/` 后在 `agentAssets.ts` 启用。

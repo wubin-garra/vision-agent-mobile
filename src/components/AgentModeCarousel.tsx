@@ -5,18 +5,27 @@ import {
   NativeSyntheticEvent,
   ScrollView,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
   useWindowDimensions,
 } from 'react-native';
 
+import { AgentIcon } from '@/components/AgentIcon';
+import { hasAgentIcon } from '@/constants/agentAssets';
 import type { CameraModeItem } from '@/constants/cameraModes';
 import { hapticLight, hapticSelection } from '@/utils/haptics';
 
-const ITEM_SIZE = 58;
+/** 选中态外径（含白环） */
 const ACTIVE_SIZE = 72;
-const ITEM_GAP = 18;
+/** 未选中图标直径 */
+const ITEM_SIZE = 64;
+const ITEM_GAP = 14;
+/** 选中白环 */
+const RING_WIDTH = 3;
+/** 白环与色圆之间的黑边（外层黑底露出） */
+const BLACK_GAP = 2;
+/** 选中时色圆直径 = 外径 − 两侧白环 − 两侧黑边 */
+const ICON_ACTIVE = ACTIVE_SIZE - 2 * RING_WIDTH - 2 * BLACK_GAP;
 const SCROLL_ANIM_MS = 260;
 
 type Props = {
@@ -83,6 +92,15 @@ export function AgentModeCarousel({ modes, selectedId, onSelect, disabled }: Pro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 收藏导致顺序变化时，保持当前选中项居中
+  const modesOrderKey = modes.map((mode) => mode.id).join('|');
+  const prevOrderKeyRef = useRef(modesOrderKey);
+  useEffect(() => {
+    if (prevOrderKeyRef.current === modesOrderKey) return;
+    prevOrderKeyRef.current = modesOrderKey;
+    scrollToIndex(selectedIndex, true);
+  }, [modesOrderKey, selectedIndex, scrollToIndex]);
+
   const handleScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     if (isTapScrollingRef.current) return;
 
@@ -139,6 +157,8 @@ export function AgentModeCarousel({ modes, selectedId, onSelect, disabled }: Pro
             extrapolate: 'clamp',
           });
           const isActive = item.id === selectedId;
+          const iconReady = hasAgentIcon(item.id);
+          const iconSize = isActive ? ICON_ACTIVE : ITEM_SIZE;
 
           return (
             <TouchableOpacity
@@ -156,8 +176,22 @@ export function AgentModeCarousel({ modes, selectedId, onSelect, disabled }: Pro
                   { opacity, transform: [{ scale }] },
                 ]}
               >
-                <View style={[styles.itemInner, isActive && styles.itemInnerActive]}>
-                  <Text style={styles.emoji}>{item.emoji}</Text>
+                <View
+                  style={[
+                    styles.itemInner,
+                    {
+                      width: iconSize,
+                      height: iconSize,
+                      borderRadius: iconSize / 2,
+                    },
+                  ]}
+                >
+                  <AgentIcon
+                    id={item.id}
+                    size={iconSize}
+                    emojiSize={isActive ? 30 : 28}
+                    fillDisc={iconReady}
+                  />
                 </View>
               </Animated.View>
             </TouchableOpacity>
@@ -187,27 +221,16 @@ const styles = StyleSheet.create({
     borderRadius: ACTIVE_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'transparent',
   },
   itemOuterActive: {
-    borderWidth: 3,
+    borderWidth: RING_WIDTH,
     borderColor: '#FFFFFF',
+    backgroundColor: '#000000',
   },
   itemInner: {
-    width: ITEM_SIZE,
-    height: ITEM_SIZE,
-    borderRadius: ITEM_SIZE / 2,
-    backgroundColor: 'rgba(255,255,255,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-  },
-  itemInnerActive: {
-    width: ACTIVE_SIZE - 8,
-    height: ACTIVE_SIZE - 8,
-    borderRadius: (ACTIVE_SIZE - 8) / 2,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-  },
-  emoji: {
-    fontSize: 28,
   },
 });

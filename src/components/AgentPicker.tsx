@@ -18,6 +18,10 @@ const DEFAULT_AGENTS: AgentId[] = [
   'food_scan',
   'palm_reader',
   'menu_translator',
+  'med_label',
+  'sight_route',
+  'hotel_guide',
+  'flight_info',
 ];
 
 export function AgentPicker({ agents = DEFAULT_AGENTS, selected, onSelect }: AgentPickerProps) {

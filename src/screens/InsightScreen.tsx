@@ -29,6 +29,11 @@ import { PalmReaderInsightSections } from '@/components/PalmReaderInsightSection
 import { PalmReaderThinkingSheet } from '@/components/PalmReaderThinkingSheet';
 import { SharePosterCard, type PosterData } from '@/components/SharePosterCard';
 import { SnackInsightSections } from '@/components/SnackInsightSections';
+import {
+  TravelInsightSections,
+  hasTravelStructuredFields,
+  isTravelAgent,
+} from '@/components/TravelInsightSections';
 import { getAgentTheme } from '@/constants/agentThemes';
 import { AGENT_LABELS } from '@/constants/config';
 import { useKeyboardInset } from '@/hooks/useKeyboardInset';
@@ -95,7 +100,7 @@ export function InsightScreen({ navigation, route }: Props) {
   };
 
   const handleContentSizeChange = () => {
-    if (entryMode !== 'history' || didInitialScrollRef.current) return;
+    if ((entryMode !== 'history' && entryMode !== 'demo') || didInitialScrollRef.current) return;
     didInitialScrollRef.current = true;
     scrollToTop();
   };
@@ -108,6 +113,10 @@ export function InsightScreen({ navigation, route }: Props) {
     let cancelled = false;
 
     (async () => {
+      if (entryMode === 'demo' || memoryId.startsWith('demo-')) {
+        if (!cancelled) setHistoryLoading(false);
+        return;
+      }
       try {
         const { followups } = await getMemory(memoryId);
         if (cancelled) return;
@@ -126,7 +135,7 @@ export function InsightScreen({ navigation, route }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [memoryId]);
+  }, [memoryId, entryMode]);
 
   const theme = getAgentTheme(agentId);
   const isFoodScan = agentId === 'food_scan';
@@ -134,6 +143,7 @@ export function InsightScreen({ navigation, route }: Props) {
   // food_explorer 产品名「零食分析」；menu_translator「翻译师」
   const isSnack = agentId === 'food_explorer';
   const isMenuTranslator = agentId === 'menu_translator';
+  const isTravel = isTravelAgent(agentId);
   const isLightInsight = theme.light;
   const isStructuredFollowUp = isFoodScan || isPalmReader;
   // 有专项字段才进专属 UI，否则回退通用线索列表（兼容旧 memory）
@@ -152,6 +162,7 @@ export function InsightScreen({ navigation, route }: Props) {
         insight.narrative ||
         insight.explore_chips?.culinary?.length,
     );
+  const isTravelStyle = isTravel && hasTravelStructuredFields(insight, agentId);
 
   const hasGroupedChips = Boolean(
     insight.explore_chips?.culinary?.length || insight.explore_chips?.nearby?.length,
@@ -171,6 +182,10 @@ export function InsightScreen({ navigation, route }: Props) {
 
   const askQuestion = async (question: string) => {
     if (!question.trim() || loading) return;
+    if (entryMode === 'demo' || memoryId.startsWith('demo-')) {
+      Alert.alert('示例模式', '这是主页 Demo，追问请用相机实拍一张再试。');
+      return;
+    }
     const source = followupSourceRef.current;
     followupSourceRef.current = 'input';
     Keyboard.dismiss();
@@ -411,6 +426,13 @@ export function InsightScreen({ navigation, route }: Props) {
               onSelectQuestion={prefillQuestion}
               theme={theme}
             />
+          ) : isTravelStyle ? (
+            <TravelInsightSections
+              insight={insight}
+              agentId={agentId}
+              onSelectQuestion={prefillQuestion}
+              theme={theme}
+            />
           ) : (
             <>
               {insight.visible_clues.length > 0 && (
@@ -570,7 +592,9 @@ export function InsightScreen({ navigation, route }: Props) {
                   ? '想了解配料或热量？问我…'
                   : isMenuTranslator
                     ? '想按忌口筛选或再译详细？问我…'
-                    : undefined
+                    : isTravel
+                      ? '关于行程还有什么想问？…'
+                      : undefined
             }
           />
         </View>
