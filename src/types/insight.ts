@@ -1,7 +1,6 @@
 export type AgentId =
   | 'local_guide'
   | 'art_critic'
-  | 'design_critic'
   | 'stylist'
   | 'food_explorer'
   | 'food_scan'

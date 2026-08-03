@@ -164,15 +164,6 @@ export const AGENT_VISUALS: Record<AgentAssetId, AgentVisual> = {
     palette: '木色画框、画布米白、笔触多色但克制',
     motif: '画框与调色盘笔触',
   },
-  design_critic: {
-    id: 'design_critic',
-    label: '设计灵感',
-    emoji: '✏️',
-    fileName: 'design_critic.png',
-    circleBg: '#E8ECF0',
-    palette: '尺子木色 / 银灰、几何体白与浅灰',
-    motif: '尺子与几何形体',
-  },
   text_reader: {
     id: 'text_reader',
     label: '文字解读',
@@ -202,7 +193,6 @@ export const AGENT_ICON_SOURCES: Partial<Record<AgentAssetId, ImageSourcePropTyp
   hotel_guide: require('../../assets/agents/hotel_guide.png'),
   flight_info: require('../../assets/agents/flight_info.png'),
   // art_critic: require('../../assets/agents/art_critic.png'),
-  // design_critic: require('../../assets/agents/design_critic.png'),
   // text_reader: require('../../assets/agents/text_reader.png'),
 };
 

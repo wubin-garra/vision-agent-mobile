@@ -203,11 +203,6 @@ export const AGENT_BRANDS: Record<AgentId, AgentBrand> = {
     accent: '#A78BFA',
     togetherLabel: '与艺术解读一起看见 ›',
   },
-  design_critic: {
-    bg: '#101210',
-    accent: '#94A3B8',
-    togetherLabel: '与设计灵感一起看见 ›',
-  },
   text_reader: {
     bg: '#0E1116',
     accent: '#60A5FA',

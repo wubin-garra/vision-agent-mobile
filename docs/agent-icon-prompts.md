@@ -118,21 +118,14 @@ Circular disc color: soft violet mist #EDE4FF. Motif: wooden frame + cream canva
 File hint: art_critic.png
 ```
 
-### 10. `design_critic.png` — 设计灵感（备用）· circleBg `#E8ECF0`
-
-```text
-Circular disc color: soft slate #E8ECF0. Motif: wooden/silver ruler + white/gray geometric cube.
-File hint: design_critic.png
-```
-
-### 11. `text_reader.png` — 文字解读（备用）· circleBg `#DCEBFF`
+### 10. `text_reader.png` — 文字解读（备用）· circleBg `#DCEBFF`
 
 ```text
 Circular disc color: soft sky #DCEBFF. Motif: white document + abstract gray text bars + pale blue highlight — NO real letters.
 File hint: text_reader.png
 ```
 
-### 12. `med_label.png` — 药品说明 · circleBg `#FDE8EA`
+### 11. `med_label.png` — 药品说明 · circleBg `#FDE8EA`
 
 ```text
 Circular disc color: soft blush #FDE8EA. Motif: small medicine bottle or blister pack with a readable label panel (NO real drug names/letters — abstract bars only). Natural white/amber bottle, not pink-washed.

@@ -72,7 +72,6 @@ export const API_MISCONFIGURED =
 export const AGENT_LABELS: Record<string, string> = {
   local_guide: '本地向导',
   art_critic: '艺术评论家',
-  design_critic: '设计评论家',
   stylist: '造型师',
   food_explorer: '零食分析',
   food_scan: '食识拍',
