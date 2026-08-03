@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AgentIcon } from '@/components/AgentIcon';
 import { getAgentCircleBg, hasAgentIcon } from '@/constants/agentAssets';
 import { featuredPrompts, perspectives } from '@/constants/homeContent';
+import { isDiaryDemoId, withDiaryDemoMemories } from '@/constants/diaryDemos';
 import {
   getDemoAgentLabel,
   getDemoCoverColor,
@@ -42,12 +43,13 @@ export function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       listMemories()
-        .then(setMemories)
-        .catch(() => setMemories([]));
+        .then((items) => setMemories(withDiaryDemoMemories(items)))
+        .catch(() => setMemories(withDiaryDemoMemories([])));
     }, [setMemories]),
   );
 
   const openMemory = (item: MemoryItem) => {
+    const isDemo = isDiaryDemoId(item.id);
     track('memory_open', {
       memory_id: item.id,
       agent: item.agent_id,
@@ -61,7 +63,7 @@ export function HomeScreen() {
         ? item.insight.next_actions
         : ['更多历史背景', '类似风格有哪些'],
       agentId: item.agent_id,
-      entryMode: 'history',
+      entryMode: isDemo ? 'demo' : 'history',
     });
   };
 

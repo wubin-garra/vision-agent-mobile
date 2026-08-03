@@ -183,7 +183,7 @@ export function InsightScreen({ navigation, route }: Props) {
   const askQuestion = async (question: string) => {
     if (!question.trim() || loading) return;
     if (entryMode === 'demo' || memoryId.startsWith('demo-')) {
-      Alert.alert('示例模式', '这是主页 Demo，追问请用相机实拍一张再试。');
+      Alert.alert('示例模式', '这是示例内容，追问请用相机实拍一张再试。');
       return;
     }
     const source = followupSourceRef.current;

@@ -20,6 +20,7 @@ import { CreditsBadge } from '@/components/CreditsBadge';
 import { ActionToast } from '@/components/ActionToast';
 import { DeleteMemoryDialog } from '@/components/DeleteMemoryDialog';
 import { AGENT_LABELS, formatApiError } from '@/constants/config';
+import { isDiaryDemoId, withDiaryDemoMemories } from '@/constants/diaryDemos';
 import { deleteMemory, listMemories } from '@/services/api';
 import { track } from '@/services/analytics';
 import { useSessionStore } from '@/store/session';
@@ -47,9 +48,9 @@ export function ProfileScreen() {
   const load = useCallback(async () => {
     try {
       const items = await listMemories();
-      setMemories(items);
+      setMemories(withDiaryDemoMemories(items));
     } catch {
-      setMemories([]);
+      setMemories(withDiaryDemoMemories([]));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -64,6 +65,7 @@ export function ProfileScreen() {
   );
 
   const openMemory = (item: MemoryItem) => {
+    const isDemo = isDiaryDemoId(item.id);
     track('memory_open', {
       memory_id: item.id,
       agent: item.agent_id,
@@ -77,11 +79,15 @@ export function ProfileScreen() {
         ? item.insight.next_actions
         : ['更多历史背景', '类似风格有哪些'],
       agentId: item.agent_id,
-      entryMode: 'history',
+      entryMode: isDemo ? 'demo' : 'history',
     });
   };
 
   const confirmDelete = (item: MemoryItem) => {
+    if (isDiaryDemoId(item.id)) {
+      Alert.alert('示例日记', '这是初始示例，不能删除。拍照后生成的日记可以长按删除。');
+      return;
+    }
     hapticMedium();
     setDeleteTarget(item);
   };
