@@ -5,7 +5,7 @@ import type { AgentTheme } from '@/constants/agentThemes';
 import { colors, radius, spacing, typography } from '@/theme';
 import type { AgentId, StructuredInsight } from '@/types/insight';
 
-type TravelAgentId = 'med_label' | 'sight_route' | 'hotel_guide' | 'flight_info';
+type TravelAgentId = 'sight_route' | 'hotel_guide' | 'flight_info';
 
 interface Props {
   insight: StructuredInsight;
@@ -52,7 +52,8 @@ function TipLines({
 }
 
 /**
- * 出国旅游专项洞察：药品 / 景点路线 / 酒店入住 / 航班。
+ * 出国旅游专项洞察：景点路线 / 酒店入住 / 航班。
+ * 药品说明已拆到 MedLabelInsightSections。
  */
 export function TravelInsightSections({
   insight,
@@ -77,93 +78,6 @@ export function TravelInsightSections({
         <View style={[styles.narrativeBlock, { borderLeftColor: accent, backgroundColor: surface }]}>
           <Text style={[styles.narrative, { color: text }]}>{insight.narrative}</Text>
         </View>
-      ) : null}
-
-      {agentId === 'med_label' && insight.med_label_reading ? (
-        <>
-          <InsightSection title="药品档案">
-            <View style={styles.metaGrid}>
-              {insight.med_label_reading.drug_name ? (
-                <MetaRow
-                  label="药名"
-                  value={insight.med_label_reading.drug_name}
-                  labelColor={textMuted}
-                  valueColor={text}
-                />
-              ) : null}
-              {insight.med_label_reading.brand ? (
-                <MetaRow
-                  label="品牌"
-                  value={insight.med_label_reading.brand}
-                  labelColor={textMuted}
-                  valueColor={text}
-                />
-              ) : null}
-              {insight.med_label_reading.usage ? (
-                <MetaRow
-                  label="适应症"
-                  value={insight.med_label_reading.usage}
-                  labelColor={textMuted}
-                  valueColor={text}
-                />
-              ) : null}
-              {insight.med_label_reading.storage ? (
-                <MetaRow
-                  label="储存"
-                  value={insight.med_label_reading.storage}
-                  labelColor={textMuted}
-                  valueColor={text}
-                />
-              ) : null}
-            </View>
-            {(insight.med_label_reading.active_ingredients?.length ?? 0) > 0 ? (
-              <Text style={[styles.bodyText, { color: text, marginTop: spacing.sm }]}>
-                成分：{insight.med_label_reading.active_ingredients!.join('、')}
-              </Text>
-            ) : null}
-            {insight.med_label_reading.translated_summary ? (
-              <Text style={[styles.summary, { color: text }]}>
-                {insight.med_label_reading.translated_summary}
-              </Text>
-            ) : null}
-          </InsightSection>
-
-          {insight.med_label_reading.dosage ||
-          (insight.med_label_reading.dosage_steps?.length ?? 0) > 0 ? (
-            <InsightSection title="用法用量">
-              {insight.med_label_reading.dosage ? (
-                <Text style={[styles.bodyText, { color: text }]}>
-                  {insight.med_label_reading.dosage}
-                </Text>
-              ) : null}
-              {(insight.med_label_reading.dosage_steps?.length ?? 0) > 0 ? (
-                <View style={{ marginTop: insight.med_label_reading.dosage ? spacing.sm : 0 }}>
-                  <TipLines items={insight.med_label_reading.dosage_steps!} color={text} />
-                </View>
-              ) : null}
-            </InsightSection>
-          ) : null}
-
-          {(insight.med_label_reading.adverse_reactions?.length ?? 0) > 0 ? (
-            <InsightSection title="不良反应">
-              <TipLines items={insight.med_label_reading.adverse_reactions!} color={text} />
-            </InsightSection>
-          ) : null}
-
-          {insight.med_label_reading.package_insert ? (
-            <InsightSection title="说明书要点">
-              <Text style={[styles.bodyText, { color: text, lineHeight: 22 }]}>
-                {insight.med_label_reading.package_insert}
-              </Text>
-            </InsightSection>
-          ) : null}
-
-          {(insight.med_label_reading.warnings?.length ?? 0) > 0 ? (
-            <InsightSection title="警示与禁忌">
-              <TipLines items={insight.med_label_reading.warnings!} color={text} />
-            </InsightSection>
-          ) : null}
-        </>
       ) : null}
 
       {agentId === 'sight_route' && insight.sight_route ? (
@@ -449,7 +363,6 @@ export function TravelInsightSections({
 
 export function isTravelAgent(agentId: AgentId): agentId is TravelAgentId {
   return (
-    agentId === 'med_label' ||
     agentId === 'sight_route' ||
     agentId === 'hotel_guide' ||
     agentId === 'flight_info'
@@ -457,7 +370,6 @@ export function isTravelAgent(agentId: AgentId): agentId is TravelAgentId {
 }
 
 export function hasTravelStructuredFields(insight: StructuredInsight, agentId: TravelAgentId): boolean {
-  if (agentId === 'med_label') return Boolean(insight.med_label_reading || insight.narrative);
   if (agentId === 'sight_route') return Boolean(insight.sight_route || insight.narrative);
   if (agentId === 'hotel_guide') return Boolean(insight.hotel_guide || insight.narrative);
   return Boolean(insight.flight_info || insight.narrative);

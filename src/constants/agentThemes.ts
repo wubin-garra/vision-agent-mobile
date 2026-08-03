@@ -154,8 +154,10 @@ export const AGENT_BRANDS: Record<AgentId, AgentBrand> = {
     togetherLabel: '与翻译师一起看见 ›',
   },
   med_label: {
-    bg: '#100E12',
-    accent: '#F07178',
+    light: true,
+    bg: '#F3F8F6',
+    accent: '#2A9B8F',
+    headerLink: '#1F7A70',
     togetherLabel: '与药品说明一起看见 ›',
   },
   sight_route: {

@@ -25,6 +25,7 @@ import { FullImageViewer } from '@/components/FullImageViewer';
 import { ChipRow, InsightCard, InsightSection, TagList } from '@/components/InsightCard';
 import { InsightInputBar, type InsightInputBarHandle } from '@/components/InsightInputBar';
 import { MenuTranslatorInsightSections } from '@/components/MenuTranslatorInsightSections';
+import { MedLabelInsightSections } from '@/components/MedLabelInsightSections';
 import { PalmReaderInsightSections } from '@/components/PalmReaderInsightSections';
 import { PalmReaderThinkingSheet } from '@/components/PalmReaderThinkingSheet';
 import { SharePosterCard, type PosterData } from '@/components/SharePosterCard';
@@ -140,6 +141,7 @@ export function InsightScreen({ navigation, route }: Props) {
   const theme = getAgentTheme(agentId);
   const isFoodScan = agentId === 'food_scan';
   const isPalmReader = agentId === 'palm_reader';
+  const isMedLabel = agentId === 'med_label';
   // food_explorer 产品名「零食分析」；menu_translator「翻译师」
   const isSnack = agentId === 'food_explorer';
   const isMenuTranslator = agentId === 'menu_translator';
@@ -162,6 +164,8 @@ export function InsightScreen({ navigation, route }: Props) {
         insight.narrative ||
         insight.explore_chips?.culinary?.length,
     );
+  const isMedLabelStyle =
+    isMedLabel && Boolean(insight.med_label_reading || insight.narrative);
   const isTravelStyle = isTravel && hasTravelStructuredFields(insight, agentId);
 
   const hasGroupedChips = Boolean(
@@ -336,7 +340,7 @@ export function InsightScreen({ navigation, route }: Props) {
         {!isPalmReader ? (
         <TouchableOpacity
           activeOpacity={0.92}
-          style={isFoodScan ? styles.imageWrap : undefined}
+          style={isFoodScan || isMedLabelStyle ? styles.imageWrap : undefined}
           onPress={() => {
             hapticLight();
             setFullImageVisible(true);
@@ -344,7 +348,7 @@ export function InsightScreen({ navigation, route }: Props) {
         >
           <Image
             source={{ uri: imageUri }}
-            style={[styles.image, isFoodScan && styles.imageFoodScan]}
+            style={[styles.image, (isFoodScan || isMedLabelStyle) && styles.imageFoodScan]}
             resizeMode="cover"
           />
         </TouchableOpacity>
@@ -356,20 +360,30 @@ export function InsightScreen({ navigation, route }: Props) {
 
         {isLightInsight ? (
           <View style={[styles.foodScanHero, isPalmReader && styles.palmHero]}>
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => setThinkingVisible(true)}
-              style={styles.agentTagBtn}
-            >
-              <Text style={[styles.agentTag, { color: theme.accent }]}>
+            {isFoodScan || isPalmReader ? (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => setThinkingVisible(true)}
+                style={styles.agentTagBtn}
+              >
+                <Text style={[styles.agentTag, { color: theme.accent }]}>
+                  {theme.togetherLabel}
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <Text style={[styles.agentTag, { color: theme.accent, marginBottom: spacing.sm }]}>
                 {theme.togetherLabel}
               </Text>
-            </TouchableOpacity>
-            <Text style={[styles.foodScanTitle, { color: theme.text }]}>{insight.title}</Text>
-            {insight.narrative ? (
-              <Text style={[styles.foodScanNarrative, { color: theme.textMuted }]}>
-                {insight.narrative}
-              </Text>
+            )}
+            {!isMedLabelStyle ? (
+              <>
+                <Text style={[styles.foodScanTitle, { color: theme.text }]}>{insight.title}</Text>
+                {insight.narrative ? (
+                  <Text style={[styles.foodScanNarrative, { color: theme.textMuted }]}>
+                    {insight.narrative}
+                  </Text>
+                ) : null}
+              </>
             ) : null}
           </View>
         ) : null}
@@ -397,6 +411,17 @@ export function InsightScreen({ navigation, route }: Props) {
                 hapticLight();
                 setFullImageVisible(true);
               }}
+              theme={theme}
+            />
+            <Text style={[styles.disclaimerLight, { color: theme.textMuted }]}>
+              {insight.disclaimer}
+            </Text>
+          </View>
+        ) : isMedLabelStyle ? (
+          <View style={styles.foodScanBody}>
+            <MedLabelInsightSections
+              insight={insight}
+              onSelectQuestion={prefillQuestion}
               theme={theme}
             />
             <Text style={[styles.disclaimerLight, { color: theme.textMuted }]}>
