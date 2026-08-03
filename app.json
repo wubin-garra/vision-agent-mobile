@@ -43,13 +43,22 @@
     "plugins": [
       "expo-sharing",
       [
+        "expo-media-library",
+        {
+          "photosPermission": "Vision Agent 需要访问相册，以便预览并分析最近的照片。",
+          "savePhotosPermission": "Vision Agent 需要保存分析相关图片到相册。",
+          "isAccessMediaLocationEnabled": false
+        }
+      ],
+      [
         "expo-speech-recognition",
         {
           "microphonePermission": "Vision Agent 需要使用麦克风进行语音输入。",
           "speechRecognitionPermission": "Vision Agent 需要语音识别权限，以便将你说的话转为文字追问。"
         }
       ],
-      "expo-localization"
+      "expo-localization",
+      "expo-status-bar"
     ],
     "extra": {
       "apiBaseUrl": "https://vision-agent-api.onrender.com",

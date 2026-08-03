@@ -1,22 +1,72 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { ChipRow, InsightSection } from '@/components/InsightCard';
+import { ChipRow } from '@/components/InsightCard';
 import type { AgentTheme } from '@/constants/agentThemes';
-import { colors, radius, spacing, typography } from '@/theme';
-import type { StructuredInsight } from '@/types/insight';
+import { lightColors, radius, spacing, typography } from '@/theme';
+import type { MenuDish, StructuredInsight } from '@/types/insight';
 
 interface Props {
   insight: StructuredInsight;
-  /** 点击追问 chip 时回填输入框 */
   onSelectQuestion: (question: string) => void;
-  /** 智能体主题（颜色统一从 agentThemes 来） */
   theme: AgentTheme;
 }
 
+function DishRow({
+  dish,
+  index,
+  accent,
+}: {
+  dish: MenuDish;
+  index: number;
+  accent: string;
+}) {
+  const tags = dish.tags?.filter(Boolean) ?? [];
+
+  return (
+    <View style={styles.dishCard}>
+      <View style={styles.dishTop}>
+        <View style={[styles.dishIndex, { backgroundColor: `${accent}18` }]}>
+          <Text style={[styles.dishIndexText, { color: accent }]}>{index + 1}</Text>
+        </View>
+        <View style={styles.dishMain}>
+          <View style={styles.dishHeader}>
+            <Text style={styles.dishOriginal} numberOfLines={3}>
+              {dish.original}
+            </Text>
+            {dish.price ? (
+              <Text style={[styles.dishPrice, { color: accent }]}>{dish.price}</Text>
+            ) : null}
+          </View>
+
+          <View style={styles.arrowRow}>
+            <View style={[styles.arrowStem, { backgroundColor: `${accent}35` }]} />
+            <Text style={[styles.arrowMark, { color: accent }]}>↓</Text>
+          </View>
+
+          <Text style={styles.dishTranslation}>{dish.translation}</Text>
+
+          {dish.notes ? <Text style={styles.dishNotes}>{dish.notes}</Text> : null}
+
+          {tags.length > 0 ? (
+            <View style={styles.tagRow}>
+              {tags.map((tag) => (
+                <View
+                  key={tag}
+                  style={[styles.tag, { backgroundColor: `${accent}14`, borderColor: `${accent}40` }]}
+                >
+                  <Text style={[styles.tagText, { color: accent }]}>{tag}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+        </View>
+      </View>
+    </View>
+  );
+}
+
 /**
- * 翻译师（menu_translator）洞察区块。
- * 核心数据在 insight.menu_translation：dishes 原文/译文对照 + ordering_tips。
- * 若无 dishes，InsightScreen 会回退到通用线索列表。
+ * 翻译师专属阅读区：薄荷绿浅色、双语对照卡，突出原文→译文。
  */
 export function MenuTranslatorInsightSections({
   insight,
@@ -25,184 +75,247 @@ export function MenuTranslatorInsightSections({
 }: Props) {
   const menu = insight.menu_translation;
   const dishes = menu?.dishes ?? [];
-  const tips = menu?.ordering_tips ?? [];
-  const exploreChips = insight.explore_chips;
-  const {
-    accent,
-    accentSoft,
-    text: textColor,
-    textMuted,
-    chipBg,
-    chipText,
-    surface,
-    border,
-  } = theme;
+  const tips = menu?.ordering_tips?.filter(Boolean) ?? [];
+  const culinaryChips = insight.explore_chips?.culinary ?? [];
+  const nearbyChips = insight.explore_chips?.nearby ?? [];
+  const { accent, chipBg, chipText } = theme;
+
+  const source = menu?.source_language?.trim();
+  const target = menu?.target_language?.trim();
+  const langPair =
+    source && target ? `${source} → ${target}` : insight.subtitle?.trim() || null;
 
   return (
-    <>
-      {/* subtitle 一般为「源语言 → 目标语言」 */}
-      {insight.subtitle ? (
-        <Text style={[styles.subtitle, textMuted ? { color: textMuted } : null]}>
-          {insight.subtitle}
-        </Text>
-      ) : null}
+    <View style={styles.wrap}>
+      <View style={styles.heroCard}>
+        <View style={styles.heroTop}>
+          <View style={[styles.badge, { backgroundColor: accent }]}>
+            <Text style={styles.badgeText}>菜单对照</Text>
+          </View>
+          {dishes.length > 0 ? (
+            <Text style={styles.langHint}>共 {dishes.length} 条</Text>
+          ) : null}
+        </View>
 
-      {insight.narrative ? (
-        <View
-          style={[
-            styles.narrativeBlock,
-            accent ? { borderLeftColor: accent } : null,
-            surface ? { backgroundColor: surface } : null,
-          ]}
-        >
-          <Text style={[styles.narrative, textColor ? { color: textColor } : null]}>
-            {insight.narrative}
-          </Text>
+        <Text style={styles.title}>{insight.title}</Text>
+        {insight.narrative ? <Text style={styles.summary}>{insight.narrative}</Text> : null}
+
+        {langPair ? (
+          <View style={[styles.langBanner, { backgroundColor: accent }]}>
+            <Text style={styles.langBannerLabel}>语言方向</Text>
+            <Text style={styles.langBannerValue}>{langPair}</Text>
+          </View>
+        ) : null}
+      </View>
+
+      {dishes.length > 0 ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>逐条对照</Text>
+          <Text style={styles.sectionLead}>原文在上，译文在下；价格与忌口标签旁注。</Text>
+          <View style={styles.dishList}>
+            {dishes.map((dish, index) => (
+              <DishRow
+                key={`${dish.original}-${dish.translation}-${index}`}
+                dish={dish}
+                index={index}
+                accent={accent}
+              />
+            ))}
+          </View>
+        </View>
+      ) : (
+        <View style={styles.section}>
+          <Text style={styles.bodyMuted}>暂无菜品对照，请对准菜单文字再拍一张。</Text>
+        </View>
+      )}
+
+      {menu?.dietary_summary ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>忌口总览</Text>
+          <View style={[styles.dietCard, { borderColor: `${accent}40` }]}>
+            <View style={[styles.dietBar, { backgroundColor: accent }]} />
+            <Text style={styles.dietBody}>{menu.dietary_summary}</Text>
+          </View>
         </View>
       ) : null}
 
-      {/* 主内容：逐条菜品对照（原文弱化、译文突出） */}
-      {dishes.length > 0 ? (
-        <InsightSection title="菜单对照">
-          <View style={styles.dishList}>
-            {dishes.map((dish, index) => (
-              <View
-                key={`${dish.original}-${dish.translation}-${index}`}
-                style={[
-                  styles.dishCard,
-                  surface ? { backgroundColor: surface } : null,
-                  border ? { borderColor: border } : null,
-                ]}
-              >
-                <View style={styles.dishHeader}>
-                  <Text style={[styles.dishOriginal, textMuted ? { color: textMuted } : null]}>
-                    {dish.original}
-                  </Text>
-                  {dish.price ? (
-                    <Text style={[styles.dishPrice, accent ? { color: accent } : null]}>
-                      {dish.price}
-                    </Text>
-                  ) : null}
+      {tips.length > 0 ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>点餐提示</Text>
+          <View style={styles.tipStack}>
+            {tips.map((tip, index) => (
+              <View key={`${index}-${tip}`} style={styles.tipRow}>
+                <View style={[styles.tipIndex, { backgroundColor: accent }]}>
+                  <Text style={styles.tipIndexText}>{index + 1}</Text>
                 </View>
-                <Text
-                  style={[styles.dishTranslation, textColor ? { color: textColor } : null]}
-                >
-                  {dish.translation}
-                </Text>
-                {dish.notes ? (
-                  <Text style={[styles.dishNotes, textMuted ? { color: textMuted } : null]}>
-                    {dish.notes}
-                  </Text>
-                ) : null}
-                {dish.tags && dish.tags.length > 0 ? (
-                  <View style={styles.tagRow}>
-                    {dish.tags.map((tag) => (
-                      <View
-                        key={tag}
-                        style={[
-                          styles.tag,
-                          accentSoft ? { backgroundColor: accentSoft } : null,
-                        ]}
-                      >
-                        <Text style={[styles.tagText, accent ? { color: accent } : null]}>
-                          {tag}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : null}
+                <Text style={styles.tipBody}>{tip}</Text>
               </View>
             ))}
           </View>
-        </InsightSection>
+        </View>
       ) : null}
 
-      {menu?.dietary_summary ? (
-        <InsightSection title="忌口总览">
-          <Text style={[styles.bodyText, textColor ? { color: textColor } : null]}>
-            {menu.dietary_summary}
-          </Text>
-        </InsightSection>
-      ) : null}
-
-      {tips.length > 0 ? (
-        <InsightSection title="点餐提示">
-          {tips.map((tip) => (
-            <Text key={tip} style={[styles.tipLine, textColor ? { color: textColor } : null]}>
-              • {tip}
-            </Text>
-          ))}
-        </InsightSection>
-      ) : null}
-
-      {/* 有结构化 tips 时不再重复展示 context.practical，避免文案重复 */}
-      {insight.context.practical && !tips.length ? (
-        <InsightSection title="实用建议">
-          <Text style={[styles.bodyText, textColor ? { color: textColor } : null]}>
-            {insight.context.practical}
-          </Text>
-        </InsightSection>
+      {insight.context.practical && tips.length === 0 ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>实用建议</Text>
+          <View style={styles.softCard}>
+            <Text style={styles.softBody}>{insight.context.practical}</Text>
+          </View>
+        </View>
       ) : null}
 
       {insight.context.cultural ? (
-        <InsightSection title="文化小注">
-          <Text style={[styles.bodyText, textColor ? { color: textColor } : null]}>
-            {insight.context.cultural}
-          </Text>
-        </InsightSection>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>文化小注</Text>
+          <Text style={styles.lead}>{insight.context.cultural}</Text>
+        </View>
       ) : null}
 
-      {/* 分组 chips 存在时，InsightScreen 会隐藏底部扁平「继续探索」 */}
-      {exploreChips &&
-      (exploreChips.culinary.length > 0 || exploreChips.nearby.length > 0) ? (
-        <View style={styles.exploreBlock}>
-          {exploreChips.culinary.length > 0 ? (
-            <View style={styles.exploreGroup}>
-              <Text style={[styles.exploreTitle, textMuted ? { color: textMuted } : null]}>
-                继续点餐
-              </Text>
+      {insight.visible_clues.length > 0 ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>画面线索</Text>
+          <View style={styles.clueWrap}>
+            {insight.visible_clues.map((clue) => (
+              <View key={clue} style={styles.clueChip}>
+                <Text style={styles.clueText}>{clue}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      {culinaryChips.length > 0 || nearbyChips.length > 0 ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>想了解更多吗？</Text>
+          {culinaryChips.length > 0 ? (
+            <ChipRow
+              items={culinaryChips}
+              onPress={onSelectQuestion}
+              light
+              chipBg={chipBg}
+              chipText={chipText}
+            />
+          ) : null}
+          {nearbyChips.length > 0 ? (
+            <View style={{ marginTop: spacing.sm }}>
               <ChipRow
-                items={exploreChips.culinary}
+                items={nearbyChips}
                 onPress={onSelectQuestion}
+                light
                 chipBg={chipBg}
                 chipText={chipText}
               />
             </View>
           ) : null}
+          <Text style={styles.aiNote}>由 Vision Agent AI 生成，翻译与忌口请以店家说明为准。</Text>
         </View>
       ) : null}
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  subtitle: {
-    ...typography.subtitle,
-    color: colors.textMuted,
-    marginTop: spacing.sm,
-    lineHeight: 24,
+  wrap: { gap: spacing.lg },
+  heroCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(42,155,143,0.14)',
+    gap: spacing.sm,
   },
-  narrativeBlock: {
-    marginTop: spacing.lg,
-    padding: spacing.md,
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.md,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.accent,
+  heroTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
   },
-  narrative: {
+  badge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radius.full,
+  },
+  badgeText: {
+    ...typography.caption,
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  langHint: {
+    ...typography.caption,
+    color: lightColors.textMuted,
+    fontWeight: '600',
+    flexShrink: 1,
+    textAlign: 'right',
+  },
+  title: {
+    ...typography.title,
+    fontSize: 26,
+    lineHeight: 32,
+    color: lightColors.text,
+    letterSpacing: -0.4,
+  },
+  summary: {
     ...typography.body,
-    color: colors.text,
-    lineHeight: 24,
+    color: lightColors.textMuted,
+    lineHeight: 22,
+  },
+  langBanner: {
+    marginTop: spacing.xs,
+    borderRadius: radius.lg,
+    paddingVertical: 12,
+    paddingHorizontal: spacing.md,
+    gap: 2,
+  },
+  langBannerLabel: {
+    ...typography.caption,
+    color: 'rgba(255,255,255,0.85)',
+    fontWeight: '700',
+  },
+  langBannerValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.2,
+  },
+  section: { gap: spacing.sm },
+  sectionTitle: {
+    ...typography.label,
+    color: lightColors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  sectionLead: {
+    ...typography.caption,
+    color: lightColors.textMuted,
+    lineHeight: 18,
+    marginTop: -2,
   },
   dishList: { gap: spacing.sm },
   dishCard: {
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.md,
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.lg,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'rgba(0,0,0,0.06)',
   },
+  dishTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  dishIndex: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  dishIndexText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  dishMain: { flex: 1, gap: 4 },
   dishHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -210,55 +323,157 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   dishOriginal: {
-    ...typography.caption,
-    color: colors.textMuted,
+    ...typography.body,
+    color: lightColors.textMuted,
     flex: 1,
+    lineHeight: 22,
   },
   dishPrice: {
     ...typography.caption,
-    color: colors.accent,
-    fontWeight: '600',
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  arrowRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginVertical: 2,
+  },
+  arrowStem: {
+    width: 18,
+    height: 2,
+    borderRadius: 1,
+  },
+  arrowMark: {
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 14,
   },
   dishTranslation: {
     ...typography.subtitle,
-    color: colors.text,
-    marginTop: 4,
+    fontSize: 18,
+    lineHeight: 24,
+    color: lightColors.text,
+    fontWeight: '700',
+    letterSpacing: -0.2,
   },
   dishNotes: {
     ...typography.caption,
-    color: colors.textMuted,
-    marginTop: spacing.xs,
+    color: lightColors.textMuted,
     lineHeight: 18,
+    marginTop: 2,
   },
   tagRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
   },
   tag: {
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: radius.full,
-    backgroundColor: colors.accentSoft,
+    borderWidth: 1,
   },
   tagText: {
     ...typography.caption,
-    color: colors.accent,
     fontSize: 11,
+    fontWeight: '600',
   },
-  bodyText: { ...typography.body, color: colors.text, lineHeight: 24 },
-  tipLine: {
+  dietCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingLeft: spacing.md + 6,
+    overflow: 'hidden',
+  },
+  dietBar: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+  },
+  dietBody: {
     ...typography.body,
-    color: colors.text,
+    color: lightColors.text,
     lineHeight: 24,
-    marginBottom: 4,
   },
-  exploreBlock: { marginTop: spacing.lg, gap: spacing.lg },
-  exploreGroup: { gap: spacing.xs },
-  exploreTitle: {
-    ...typography.label,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
+  tipStack: { gap: spacing.sm },
+  tipRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+  },
+  tipIndex: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  tipIndexText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  tipBody: {
+    ...typography.body,
+    color: lightColors.text,
+    lineHeight: 22,
+    flex: 1,
+  },
+  softCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+  },
+  softBody: {
+    ...typography.body,
+    color: lightColors.text,
+    lineHeight: 24,
+  },
+  lead: {
+    ...typography.body,
+    color: lightColors.text,
+    lineHeight: 24,
+  },
+  clueWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  clueChip: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.full,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
+  },
+  clueText: {
+    ...typography.caption,
+    color: lightColors.textMuted,
+  },
+  bodyMuted: {
+    ...typography.body,
+    color: lightColors.textMuted,
+    lineHeight: 22,
+  },
+  aiNote: {
+    ...typography.caption,
+    color: lightColors.textMuted,
+    marginTop: spacing.sm,
+    lineHeight: 18,
   },
 });

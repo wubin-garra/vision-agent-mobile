@@ -5,7 +5,7 @@ import type { AgentTheme } from '@/constants/agentThemes';
 import { colors, radius, spacing, typography } from '@/theme';
 import type { AgentId, StructuredInsight } from '@/types/insight';
 
-type TravelAgentId = 'sight_route' | 'hotel_guide';
+type TravelAgentId = 'sight_route';
 
 interface Props {
   insight: StructuredInsight;
@@ -52,8 +52,8 @@ function TipLines({
 }
 
 /**
- * 出国旅游专项洞察：景点路线 / 酒店入住 / 航班。
- * 药品说明已拆到 MedLabelInsightSections。
+ * 出国旅游专项洞察：景点路线。
+ * 药品 / 航班 / 酒店已拆到各自专属 Sections。
  */
 export function TravelInsightSections({
   insight,
@@ -152,92 +152,6 @@ export function TravelInsightSections({
         </>
       ) : null}
 
-      {agentId === 'hotel_guide' && insight.hotel_guide ? (
-        <>
-          <InsightSection title="入住信息">
-            <View style={styles.metaGrid}>
-              {insight.hotel_guide.hotel_name ? (
-                <MetaRow
-                  label="酒店"
-                  value={insight.hotel_guide.hotel_name}
-                  labelColor={textMuted}
-                  valueColor={text}
-                />
-              ) : null}
-              {insight.hotel_guide.confirmation_code ? (
-                <MetaRow
-                  label="确认号"
-                  value={insight.hotel_guide.confirmation_code}
-                  labelColor={textMuted}
-                  valueColor={text}
-                />
-              ) : null}
-              {insight.hotel_guide.guest_name ? (
-                <MetaRow
-                  label="住客"
-                  value={insight.hotel_guide.guest_name}
-                  labelColor={textMuted}
-                  valueColor={text}
-                />
-              ) : null}
-              {insight.hotel_guide.check_in ? (
-                <MetaRow
-                  label="入住"
-                  value={insight.hotel_guide.check_in}
-                  labelColor={textMuted}
-                  valueColor={text}
-                />
-              ) : null}
-              {insight.hotel_guide.check_out ? (
-                <MetaRow
-                  label="退房"
-                  value={insight.hotel_guide.check_out}
-                  labelColor={textMuted}
-                  valueColor={text}
-                />
-              ) : null}
-              {insight.hotel_guide.room_type ? (
-                <MetaRow
-                  label="房型"
-                  value={insight.hotel_guide.room_type}
-                  labelColor={textMuted}
-                  valueColor={text}
-                />
-              ) : null}
-              {insight.hotel_guide.address ? (
-                <MetaRow
-                  label="地址"
-                  value={insight.hotel_guide.address}
-                  labelColor={textMuted}
-                  valueColor={text}
-                />
-              ) : null}
-            </View>
-          </InsightSection>
-          {(insight.hotel_guide.steps?.length ?? 0) > 0 ? (
-            <InsightSection title="到店步骤">
-              {insight.hotel_guide.steps!.map((step, index) => (
-                <Text key={`${step}-${index}`} style={[styles.tipLine, { color: text }]}>
-                  {index + 1}. {step}
-                </Text>
-              ))}
-            </InsightSection>
-          ) : null}
-          {(insight.hotel_guide.amenities_notes?.length ?? 0) > 0 ? (
-            <InsightSection title="设施备注">
-              <TipLines items={insight.hotel_guide.amenities_notes!} color={text} />
-            </InsightSection>
-          ) : null}
-          {insight.hotel_guide.wifi_or_access ? (
-            <InsightSection title="网络 / 门禁">
-              <Text style={[styles.bodyText, { color: text }]}>
-                {insight.hotel_guide.wifi_or_access}
-              </Text>
-            </InsightSection>
-          ) : null}
-        </>
-      ) : null}
-
       {insight.context.practical ? (
         <InsightSection title="实用提示">
           <Text style={[styles.bodyText, { color: text }]}>{insight.context.practical}</Text>
@@ -255,12 +169,11 @@ export function TravelInsightSections({
 }
 
 export function isTravelAgent(agentId: AgentId): agentId is TravelAgentId {
-  return agentId === 'sight_route' || agentId === 'hotel_guide';
+  return agentId === 'sight_route';
 }
 
 export function hasTravelStructuredFields(insight: StructuredInsight, agentId: TravelAgentId): boolean {
-  if (agentId === 'sight_route') return Boolean(insight.sight_route || insight.narrative);
-  return Boolean(insight.hotel_guide || insight.narrative);
+  return Boolean(insight.sight_route || insight.narrative);
 }
 
 const styles = StyleSheet.create({

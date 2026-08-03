@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -12,10 +12,12 @@ import {
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
-import { useNavigation } from '@react-navigation/native';
+import * as MediaLibrary from 'expo-media-library/legacy';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Path } from 'react-native-svg';
 
 import {
   AnalysisThinkingOverlay,
@@ -54,6 +56,40 @@ import type { RootStackParamList } from '@/types/navigation';
 import { getCurrentCoordinates } from '@/utils/location';
 import { cropCaptureToViewport, getCaptureCropRatio } from '@/utils/captureCrop';
 import { hapticLight, hapticMedium, hapticSelection } from '@/utils/haptics';
+
+/** 前后摄切换：双向弧形箭头 */
+function FlipCameraIcon({ color = '#FFFFFF', size = 22 }: { color?: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M19.5 8.2A7.2 7.2 0 0 0 6.6 6.55"
+        stroke={color}
+        strokeWidth={1.9}
+        strokeLinecap="round"
+      />
+      <Path
+        d="M19.5 4.4v3.8h-3.8"
+        stroke={color}
+        strokeWidth={1.9}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <Path
+        d="M4.5 15.8a7.2 7.2 0 0 0 12.9 1.65"
+        stroke={color}
+        strokeWidth={1.9}
+        strokeLinecap="round"
+      />
+      <Path
+        d="M4.5 19.6v-3.8h3.8"
+        stroke={color}
+        strokeWidth={1.9}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
 
 /** 镜头名胶囊固定宽，避免切换时跳动 */
 const MODE_PILL_WIDTH = 176;
@@ -112,6 +148,41 @@ export function CameraScreen() {
   useEffect(() => {
     void hydrateFavorites();
   }, [hydrateFavorites]);
+
+  /** 预览系统相册最新一张（与常见相机产品一致） */
+  const refreshGalleryThumb = useCallback(async () => {
+    try {
+      const current = await MediaLibrary.getPermissionsAsync();
+      let permission = current;
+      if (permission.status === 'undetermined') {
+        permission = await MediaLibrary.requestPermissionsAsync();
+      }
+      const allowed =
+        permission.status === 'granted' ||
+        permission.accessPrivileges === 'limited';
+      if (!allowed) return;
+
+      const { assets } = await MediaLibrary.getAssetsAsync({
+        first: 1,
+        mediaType: MediaLibrary.MediaType.photo,
+        sortBy: [MediaLibrary.SortBy.creationTime],
+      });
+      const asset = assets[0];
+      if (!asset) return;
+
+      const info = await MediaLibrary.getAssetInfoAsync(asset);
+      const uri = info.localUri ?? asset.uri;
+      if (uri) setLastPhoto(uri);
+    } catch {
+      // 无权限或空相册时保持占位，不打断拍照
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void refreshGalleryThumb();
+    }, [refreshGalleryThumb]),
+  );
 
   // 分析中本地推进思考步骤，填满上传→返回结果之间的等待感
   useEffect(() => {
@@ -504,15 +575,17 @@ export function CameraScreen() {
           </View>
 
           <TouchableOpacity
-            style={styles.flipBtn}
+            style={[styles.flipBtn, analyzing && styles.flipBtnDisabled]}
             onPress={() => {
               hapticLight();
               setFacing((current) => (current === 'back' ? 'front' : 'back'));
               resetZoom();
             }}
             disabled={analyzing}
+            accessibilityRole="button"
+            accessibilityLabel="切换前后摄像头"
           >
-            <Text style={styles.flipIcon}>↻</Text>
+            <FlipCameraIcon />
           </TouchableOpacity>
         </View>
 
@@ -830,9 +903,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  flipIcon: {
-    color: '#FFFFFF',
-    fontSize: 20,
+  flipBtnDisabled: {
+    opacity: 0.45,
   },
   statusBar: {
     alignSelf: 'center',
