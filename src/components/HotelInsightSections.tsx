@@ -11,6 +11,24 @@ type Props = {
   theme: AgentTheme;
 };
 
+/** 常见 12 小时制 → 24 小时制，便于窄卡一行显示（如 3:00 PM → 15:00） */
+function to24HourClock(raw: string | null | undefined, fallback = '—'): string {
+  const text = raw?.trim();
+  if (!text) return fallback;
+
+  return text.replace(
+    /\b(\d{1,2})(?::(\d{2}))?\s*(?:([AaPp])\.?[Mm]\.?)\b/g,
+    (_match, hourStr: string, minuteStr: string | undefined, meridiem: string) => {
+      let hour = Number.parseInt(hourStr, 10);
+      const minutes = minuteStr ?? '00';
+      const isPm = meridiem.toUpperCase() === 'P';
+      if (isPm && hour < 12) hour += 12;
+      if (!isPm && hour === 12) hour = 0;
+      return `${String(hour).padStart(2, '0')}:${minutes}`;
+    },
+  );
+}
+
 /**
  * 酒店入住专属阅读区：暖沙浅色入住卡，突出确认号 / 入住退房时间 / 到店步骤。
  */
@@ -32,6 +50,13 @@ export function HotelInsightSections({ insight, onSelectQuestion, theme }: Props
 
   const steps = hotel.steps?.filter(Boolean) ?? [];
   const amenities = hotel.amenities_notes?.filter(Boolean) ?? [];
+  const checkIn = to24HourClock(hotel.check_in);
+  const checkOut = to24HourClock(hotel.check_out);
+  const passSub = insight.subtitle
+    ? to24HourClock(insight.subtitle, insight.subtitle)
+    : insight.narrative
+      ? to24HourClock(insight.narrative, insight.narrative)
+      : null;
 
   return (
     <View style={styles.wrap}>
@@ -45,9 +70,7 @@ export function HotelInsightSections({ insight, onSelectQuestion, theme }: Props
         </View>
 
         <Text style={styles.hotelName}>{hotel.hotel_name || insight.title}</Text>
-        {insight.subtitle || insight.narrative ? (
-          <Text style={styles.passSub}>{insight.subtitle || insight.narrative}</Text>
-        ) : null}
+        {passSub ? <Text style={styles.passSub}>{passSub}</Text> : null}
 
         {hotel.confirmation_code ? (
           <View style={[styles.codeBanner, { backgroundColor: accent }]}>
@@ -56,12 +79,17 @@ export function HotelInsightSections({ insight, onSelectQuestion, theme }: Props
           </View>
         ) : null}
 
-        {/* 入住 / 退房时间突显 */}
+        {/* 入住 / 退房时间突显（24 小时制，尽量一行） */}
         <View style={styles.timeRow}>
           <View style={[styles.timeTile, { borderColor: `${accent}40` }]}>
             <Text style={styles.timeLabel}>入住</Text>
-            <Text style={[styles.timeValue, { color: accent }]}>
-              {hotel.check_in?.trim() || '—'}
+            <Text
+              style={[styles.timeValue, { color: accent }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+            >
+              {checkIn}
             </Text>
           </View>
           <View style={styles.timeArrow}>
@@ -69,8 +97,13 @@ export function HotelInsightSections({ insight, onSelectQuestion, theme }: Props
           </View>
           <View style={[styles.timeTile, { borderColor: `${accent}40` }]}>
             <Text style={styles.timeLabel}>退房</Text>
-            <Text style={[styles.timeValue, { color: accent }]}>
-              {hotel.check_out?.trim() || '—'}
+            <Text
+              style={[styles.timeValue, { color: accent }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+            >
+              {checkOut}
             </Text>
           </View>
         </View>
@@ -234,21 +267,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFBF5',
     borderRadius: radius.lg,
     borderWidth: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    minHeight: 78,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    minHeight: 72,
     justifyContent: 'center',
   },
   timeLabel: {
     ...typography.caption,
     color: lightColors.textMuted,
     fontWeight: '700',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   timeValue: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: '800',
-    letterSpacing: -0.4,
+    letterSpacing: -0.3,
+    lineHeight: 26,
   },
   timeArrow: {
     width: 20,
