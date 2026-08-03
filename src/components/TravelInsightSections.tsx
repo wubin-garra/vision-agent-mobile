@@ -5,7 +5,7 @@ import type { AgentTheme } from '@/constants/agentThemes';
 import { colors, radius, spacing, typography } from '@/theme';
 import type { AgentId, StructuredInsight } from '@/types/insight';
 
-type TravelAgentId = 'sight_route' | 'hotel_guide' | 'flight_info';
+type TravelAgentId = 'sight_route' | 'hotel_guide';
 
 interface Props {
   insight: StructuredInsight;
@@ -238,113 +238,6 @@ export function TravelInsightSections({
         </>
       ) : null}
 
-      {agentId === 'flight_info' && insight.flight_info ? (
-        <>
-          <InsightSection title="航班档案">
-            <View style={styles.metaGrid}>
-              {insight.flight_info.airline ? (
-                <MetaRow
-                  label="航司"
-                  value={insight.flight_info.airline}
-                  labelColor={textMuted}
-                  valueColor={text}
-                />
-              ) : null}
-              {insight.flight_info.flight_number ? (
-                <MetaRow
-                  label="航班"
-                  value={insight.flight_info.flight_number}
-                  labelColor={textMuted}
-                  valueColor={text}
-                />
-              ) : null}
-              {insight.flight_info.passenger ? (
-                <MetaRow
-                  label="乘客"
-                  value={insight.flight_info.passenger}
-                  labelColor={textMuted}
-                  valueColor={text}
-                />
-              ) : null}
-              {insight.flight_info.booking_ref ? (
-                <MetaRow
-                  label="订座"
-                  value={insight.flight_info.booking_ref}
-                  labelColor={textMuted}
-                  valueColor={text}
-                />
-              ) : null}
-              {insight.flight_info.seat ? (
-                <MetaRow
-                  label="座位"
-                  value={insight.flight_info.seat}
-                  labelColor={textMuted}
-                  valueColor={text}
-                />
-              ) : null}
-              {insight.flight_info.cabin ? (
-                <MetaRow
-                  label="舱位"
-                  value={insight.flight_info.cabin}
-                  labelColor={textMuted}
-                  valueColor={text}
-                />
-              ) : null}
-            </View>
-          </InsightSection>
-          {insight.flight_info.departure || insight.flight_info.arrival ? (
-            <InsightSection title="起降">
-              {insight.flight_info.departure ? (
-                <Text style={[styles.tipLine, { color: text }]}>
-                  出发：
-                  {[
-                    insight.flight_info.departure.airport,
-                    insight.flight_info.departure.time,
-                    insight.flight_info.departure.terminal
-                      ? `航站楼 ${insight.flight_info.departure.terminal}`
-                      : null,
-                    insight.flight_info.departure.gate
-                      ? `登机口 ${insight.flight_info.departure.gate}`
-                      : null,
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </Text>
-              ) : null}
-              {insight.flight_info.arrival ? (
-                <Text style={[styles.tipLine, { color: text }]}>
-                  到达：
-                  {[
-                    insight.flight_info.arrival.airport,
-                    insight.flight_info.arrival.time,
-                    insight.flight_info.arrival.terminal
-                      ? `航站楼 ${insight.flight_info.arrival.terminal}`
-                      : null,
-                    insight.flight_info.arrival.gate
-                      ? `登机口 ${insight.flight_info.arrival.gate}`
-                      : null,
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </Text>
-              ) : null}
-            </InsightSection>
-          ) : null}
-          {(insight.flight_info.timeline_tips?.length ?? 0) > 0 ? (
-            <InsightSection title="行程提示">
-              <TipLines items={insight.flight_info.timeline_tips!} color={text} />
-            </InsightSection>
-          ) : null}
-          {insight.flight_info.status_notes ? (
-            <InsightSection title="状态备注">
-              <Text style={[styles.bodyText, { color: text }]}>
-                {insight.flight_info.status_notes}
-              </Text>
-            </InsightSection>
-          ) : null}
-        </>
-      ) : null}
-
       {insight.context.practical ? (
         <InsightSection title="实用提示">
           <Text style={[styles.bodyText, { color: text }]}>{insight.context.practical}</Text>
@@ -362,17 +255,12 @@ export function TravelInsightSections({
 }
 
 export function isTravelAgent(agentId: AgentId): agentId is TravelAgentId {
-  return (
-    agentId === 'sight_route' ||
-    agentId === 'hotel_guide' ||
-    agentId === 'flight_info'
-  );
+  return agentId === 'sight_route' || agentId === 'hotel_guide';
 }
 
 export function hasTravelStructuredFields(insight: StructuredInsight, agentId: TravelAgentId): boolean {
   if (agentId === 'sight_route') return Boolean(insight.sight_route || insight.narrative);
-  if (agentId === 'hotel_guide') return Boolean(insight.hotel_guide || insight.narrative);
-  return Boolean(insight.flight_info || insight.narrative);
+  return Boolean(insight.hotel_guide || insight.narrative);
 }
 
 const styles = StyleSheet.create({

@@ -213,6 +213,11 @@ export const diaryMemoryDemos: MemoryItem[] = [
         { title: '酱汁另碟', body: '照烧/蒜蓉酱另蘸，比直接浇在食材上更好控钠与糖。' },
         { title: '先蛋白后淀粉', body: '先吃肉与蔬菜，再吃炒饭，饱腹感更稳。' },
       ],
+      flavor_notes: [
+        { emoji: '🔥', label: '氛围', value: '火焰与焦香先抓住注意力' },
+        { emoji: '🧈', label: '口感', value: '外层焦香、内里偏嫩，黄油收汁更润' },
+        { emoji: '🧂', label: '味道', value: '咸香为主，酱汁决定最终咸度' },
+      ],
       explore_chips: {
         culinary: ['这餐热量大概多少？', '怎么点更清淡？', '铁板烧有什么禁忌要注意？'],
         nearby: [],
@@ -269,6 +274,11 @@ export const diaryMemoryDemos: MemoryItem[] = [
       nutrition_tips: [
         { title: '酱油浅蘸', body: '鱼肉轻点酱油，比浸泡更能保留原味，也更控钠。' },
         { title: '配白身更均衡', body: '油性鱼与白身鱼搭配，口感与脂肪摄入更平衡。' },
+      ],
+      flavor_notes: [
+        { emoji: '🐟', label: '鲜味', value: '海鱼本味清甜，脂肪鱼更润' },
+        { emoji: '🔪', label: '刀工', value: '厚切与薄片并存，口感层次分明' },
+        { emoji: '🍋', label: '点缀', value: '柠檬与芥末提香，不宜抢戏' },
       ],
       explore_chips: {
         culinary: ['这盘蛋白质高吗？', '不能吃生食可以点什么？', '三文鱼和金枪鱼怎么区分？'],

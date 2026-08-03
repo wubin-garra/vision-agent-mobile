@@ -1,321 +1,431 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { ChipRow, InsightSection, TagList } from '@/components/InsightCard';
+import { ChipRow } from '@/components/InsightCard';
 import type { AgentTheme } from '@/constants/agentThemes';
-import { colors, radius, spacing, typography } from '@/theme';
+import { lightColors, radius, spacing, typography } from '@/theme';
 import type { StructuredInsight } from '@/types/insight';
 
 interface Props {
   insight: StructuredInsight;
-  /** 点击追问 chip 时回填输入框 */
   onSelectQuestion: (question: string) => void;
-  /** 智能体主题（颜色统一从 agentThemes 来） */
   theme: AgentTheme;
 }
 
 /**
- * 零食分析（food_explorer）洞察区块。
- * 核心数据：snack_analysis（档案）+ flavor_notes（风味）+ allergens（过敏原）。
- * agent_id 仍为 food_explorer，与历史记忆兼容。
+ * 零食分析专属阅读区：暖杏浅色、包装速读卡，突出热量 / 口味 / 过敏提示。
  */
 export function SnackInsightSections({ insight, onSelectQuestion, theme }: Props) {
   const snack = insight.snack_analysis;
-  const exploreChips = insight.explore_chips;
   const allergens = insight.allergens ?? [];
-  const { accent, accentSoft, text, textMuted, chipBg, chipText } = theme;
+  const flavorNotes = insight.flavor_notes ?? [];
+  const cautionNotes = snack?.caution_notes ?? [];
+  const tasteTags = snack?.taste_tags ?? [];
+  const ingredients = snack?.ingredients_highlight ?? [];
+  const culinaryChips = insight.explore_chips?.culinary ?? [];
+  const nearbyChips = insight.explore_chips?.nearby ?? [];
+  const { accent, chipBg, chipText } = theme;
+
+  const productName = snack?.product_name || insight.title;
+  const brand = snack?.brand;
 
   return (
-    <>
-      {insight.subtitle ? <Text style={styles.subtitle}>{insight.subtitle}</Text> : null}
+    <View style={styles.wrap}>
+      {/* 产品身份卡 */}
+      <View style={styles.heroCard}>
+        <View style={styles.heroTop}>
+          <View style={[styles.badge, { backgroundColor: accent }]}>
+            <Text style={styles.badgeText}>零食速读</Text>
+          </View>
+          {snack?.snack_type ? (
+            <Text style={styles.typeHint}>{snack.snack_type}</Text>
+          ) : null}
+        </View>
 
-      {insight.narrative ? (
-        <View style={[styles.narrativeBlock, { borderLeftColor: accent }]}>
-          <Text style={[styles.narrative, { color: text }]}>{insight.narrative}</Text>
+        {brand ? <Text style={[styles.brand, { color: accent }]}>{brand}</Text> : null}
+        <Text style={styles.productName}>{productName}</Text>
+        {insight.subtitle ? <Text style={styles.subtitle}>{insight.subtitle}</Text> : null}
+        {insight.narrative ? <Text style={styles.summary}>{insight.narrative}</Text> : null}
+
+        {snack?.calories_estimate ? (
+          <View style={[styles.calorieBanner, { backgroundColor: accent }]}>
+            <Text style={styles.calorieLabel}>热量估算</Text>
+            <Text style={styles.calorieValue}>{snack.calories_estimate}</Text>
+          </View>
+        ) : null}
+
+        {tasteTags.length > 0 ? (
+          <View style={styles.chipWrap}>
+            {tasteTags.map((tag) => (
+              <View key={tag} style={[styles.tasteChip, { borderColor: `${accent}55` }]}>
+                <Text style={[styles.tasteChipText, { color: accent }]}>{tag}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+      </View>
+
+      {/* 配料亮点 */}
+      {ingredients.length > 0 ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>配料亮点</Text>
+          <View style={styles.ingredientGrid}>
+            {ingredients.map((item) => (
+              <View key={item} style={styles.ingredientCard}>
+                <Text style={styles.ingredientText}>{item}</Text>
+              </View>
+            ))}
+          </View>
         </View>
       ) : null}
 
-      {/* 结构化档案：品牌 / 品类 / 热量等一行一项 */}
-      {snack ? (
-        <InsightSection title="零食档案">
-          <View style={styles.metaGrid}>
-            {snack.brand ? (
-              <MetaRow label="品牌" value={snack.brand} labelColor={textMuted} valueColor={text} />
-            ) : null}
-            {snack.product_name ? (
-              <MetaRow label="产品" value={snack.product_name} labelColor={textMuted} valueColor={text} />
-            ) : null}
-            {snack.snack_type ? (
-              <MetaRow label="品类" value={snack.snack_type} labelColor={textMuted} valueColor={text} />
-            ) : null}
-            {snack.calories_estimate ? (
-              <MetaRow
-                label="热量"
-                value={snack.calories_estimate}
-                labelColor={textMuted}
-                valueColor={text}
-              />
-            ) : null}
-          </View>
-          {snack.taste_tags && snack.taste_tags.length > 0 ? (
-            <View style={styles.tagBlock}>
-              <Text style={[styles.metaLabel, { color: textMuted }]}>
-                口味标签
-              </Text>
-              <TagList
-                items={snack.taste_tags}
-                accent={accent}
-                accentSoft={accentSoft}
-                textColor={accent}
-              />
-            </View>
-          ) : null}
-          {snack.ingredients_highlight && snack.ingredients_highlight.length > 0 ? (
-            <View style={styles.tagBlock}>
-              <Text style={[styles.metaLabel, { color: textMuted }]}>
-                配料亮点
-              </Text>
-              <TagList
-                items={snack.ingredients_highlight}
-                accent={accent}
-                accentSoft={accentSoft}
-                textColor={accent}
-              />
-            </View>
-          ) : null}
-          {snack.serving_tip ? (
-            <Text style={[styles.servingTip, { color: textMuted }]}>
-              💡 {snack.serving_tip}
-            </Text>
-          ) : null}
-        </InsightSection>
-      ) : null}
-
-      {insight.flavor_notes && insight.flavor_notes.length > 0 ? (
-        <InsightSection title="风味解构">
+      {/* 风味 */}
+      {flavorNotes.length > 0 ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>风味解构</Text>
           <View style={styles.flavorList}>
-            {insight.flavor_notes.map((note) => (
-              <View key={`${note.label}-${note.value}`} style={styles.flavorRow}>
-                <Text style={styles.flavorEmoji}>{note.emoji ?? '•'}</Text>
+            {flavorNotes.map((note) => (
+              <View key={`${note.label}-${note.value}`} style={styles.flavorCard}>
+                <View style={[styles.flavorIconWrap, { backgroundColor: `${accent}22` }]}>
+                  <Text style={styles.flavorEmoji}>{note.emoji ?? '✦'}</Text>
+                </View>
                 <View style={styles.flavorText}>
-                  <Text style={[styles.flavorLabel, { color: textMuted }]}>
-                    {note.label}
-                  </Text>
-                  <Text style={[styles.flavorValue, { color: text }]}>
-                    {note.value}
-                  </Text>
+                  <Text style={styles.flavorLabel}>{note.label}</Text>
+                  <Text style={styles.flavorValue}>{note.value}</Text>
                 </View>
               </View>
             ))}
           </View>
-        </InsightSection>
+        </View>
       ) : null}
 
-      {/* allergens 与食识拍共用字段；零食侧重包装可见/可推断的过敏原 */}
+      {/* 食用提示 */}
+      {snack?.serving_tip || insight.context.practical ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>怎么吃更合适</Text>
+          <View style={styles.tipCard}>
+            <Text style={styles.tipBody}>
+              {snack?.serving_tip || insight.context.practical}
+            </Text>
+          </View>
+        </View>
+      ) : null}
+
+      {/* 过敏原 */}
       {allergens.length > 0 ? (
-        <InsightSection title="过敏原提示">
-          {allergens.map((item) => (
-            <Text
-              key={`${item.category}-${item.detail}`}
-              style={[styles.tipLine, { color: text }]}
-            >
-              {item.emoji ?? '⚠️'} {item.category}
-              {item.detail ? ` — ${item.detail}` : ''}
-            </Text>
-          ))}
-        </InsightSection>
-      ) : null}
-
-      {snack?.caution_notes && snack.caution_notes.length > 0 ? (
-        <InsightSection title="食用注意">
-          {snack.caution_notes.map((note) => (
-            <Text key={note} style={[styles.tipLine, { color: text }]}>
-              • {note}
-            </Text>
-          ))}
-        </InsightSection>
-      ) : null}
-
-      {insight.context.practical ? (
-        <InsightSection title="食用提示">
-          <Text style={[styles.bodyText, { color: text }]}>
-            {insight.context.practical}
-          </Text>
-        </InsightSection>
-      ) : null}
-
-      {insight.context.cultural ? (
-        <InsightSection title="零食文化">
-          <Text style={[styles.bodyText, { color: text }]}>
-            {insight.context.cultural}
-          </Text>
-        </InsightSection>
-      ) : null}
-
-      {insight.nearby_picks && insight.nearby_picks.length > 0 ? (
-        <InsightSection title="附近购买">
-          <View style={styles.nearbyList}>
-            {insight.nearby_picks.map((pick) => (
-              <View key={pick.name} style={styles.nearbyCard}>
-                <Text style={[styles.nearbyName, { color: text }]}>
-                  📍 {pick.name}
-                </Text>
-                {pick.blurb ? (
-                  <Text style={[styles.nearbyBlurb, { color: textMuted }]}>
-                    {pick.blurb}
-                  </Text>
-                ) : null}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>过敏原提示</Text>
+          <View style={styles.allergenStack}>
+            {allergens.map((item) => (
+              <View key={`${item.category}-${item.detail}`} style={styles.allergenRow}>
+                <Text style={styles.allergenEmoji}>{item.emoji ?? '⚠️'}</Text>
+                <View style={styles.allergenText}>
+                  <Text style={styles.allergenCategory}>{item.category}</Text>
+                  {item.detail ? <Text style={styles.allergenDetail}>{item.detail}</Text> : null}
+                </View>
               </View>
             ))}
           </View>
-        </InsightSection>
-      ) : null}
-
-      {exploreChips &&
-      (exploreChips.culinary.length > 0 || exploreChips.nearby.length > 0) ? (
-        <View style={styles.exploreBlock}>
-          {exploreChips.culinary.length > 0 ? (
-            <View style={styles.exploreGroup}>
-              <Text style={[styles.exploreTitle, { color: textMuted }]}>
-                继续拆零食
-              </Text>
-              <ChipRow
-                items={exploreChips.culinary}
-                onPress={onSelectQuestion}
-                chipBg={chipBg}
-                chipText={chipText}
-              />
-            </View>
-          ) : null}
-          {exploreChips.nearby.length > 0 ? (
-            <View style={styles.exploreGroup}>
-              <Text style={[styles.exploreTitle, { color: textMuted }]}>
-                附近购买
-              </Text>
-              <ChipRow
-                items={exploreChips.nearby}
-                onPress={onSelectQuestion}
-                chipBg={chipBg}
-                chipText={chipText}
-              />
-            </View>
-          ) : null}
         </View>
       ) : null}
-    </>
-  );
-}
 
-/** 档案区键值行：左 label、右 value */
-function MetaRow({
-  label,
-  value,
-  labelColor,
-  valueColor,
-}: {
-  label: string;
-  value: string;
-  labelColor?: string;
-  valueColor?: string;
-}) {
-  return (
-    <View style={styles.metaRow}>
-      <Text style={[styles.metaLabel, labelColor ? { color: labelColor } : null]}>{label}</Text>
-      <Text style={[styles.metaValue, valueColor ? { color: valueColor } : null]}>{value}</Text>
+      {/* 注意 */}
+      {cautionNotes.length > 0 ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>食用注意</Text>
+          <View style={styles.warnCard}>
+            {cautionNotes.map((note) => (
+              <View key={note} style={styles.warnRow}>
+                <Text style={styles.warnMark}>!</Text>
+                <Text style={styles.warnBody}>{note}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      {insight.context.cultural ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>零食文化</Text>
+          <Text style={styles.lead}>{insight.context.cultural}</Text>
+        </View>
+      ) : null}
+
+      {insight.nearby_picks && insight.nearby_picks.length > 0 ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>附近购买</Text>
+          {insight.nearby_picks.map((pick) => (
+            <View key={pick.name} style={styles.nearbyCard}>
+              <Text style={styles.nearbyName}>📍 {pick.name}</Text>
+              {pick.blurb ? <Text style={styles.nearbyBlurb}>{pick.blurb}</Text> : null}
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      {culinaryChips.length > 0 || nearbyChips.length > 0 ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>想了解更多吗？</Text>
+          {culinaryChips.length > 0 ? (
+            <ChipRow
+              items={culinaryChips}
+              onPress={onSelectQuestion}
+              light
+              chipBg={chipBg}
+              chipText={chipText}
+            />
+          ) : null}
+          {nearbyChips.length > 0 ? (
+            <View style={{ marginTop: spacing.sm }}>
+              <ChipRow
+                items={nearbyChips}
+                onPress={onSelectQuestion}
+                light
+                chipBg={chipBg}
+                chipText={chipText}
+              />
+            </View>
+          ) : null}
+          <Text style={styles.aiNote}>由 Vision Agent AI 生成，配料与过敏信息请以包装原文为准。</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  subtitle: {
-    ...typography.subtitle,
-    color: colors.textMuted,
-    marginTop: spacing.sm,
-    lineHeight: 24,
+  wrap: { gap: spacing.lg },
+  heroCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(212,137,58,0.16)',
+    gap: spacing.sm,
   },
-  narrativeBlock: {
-    marginTop: spacing.lg,
-    padding: spacing.md,
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.md,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.accent,
-  },
-  narrative: {
-    ...typography.body,
-    color: colors.text,
-    lineHeight: 24,
-  },
-  metaGrid: { gap: spacing.sm },
-  metaRow: {
+  heroTop: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.md,
+    gap: spacing.sm,
   },
-  metaLabel: {
-    ...typography.label,
-    color: colors.textMuted,
-    minWidth: 56,
+  badge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radius.full,
   },
-  metaValue: {
-    ...typography.body,
-    color: colors.text,
-    flex: 1,
-    textAlign: 'right',
-  },
-  tagBlock: { marginTop: spacing.md, gap: spacing.xs },
-  servingTip: {
+  badgeText: {
     ...typography.caption,
-    color: colors.textMuted,
-    marginTop: spacing.md,
-    lineHeight: 20,
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
-  flavorList: { gap: spacing.md },
-  flavorRow: {
+  typeHint: {
+    ...typography.caption,
+    color: lightColors.textMuted,
+    fontWeight: '600',
+  },
+  brand: {
+    ...typography.subtitle,
+    fontSize: 15,
+  },
+  productName: {
+    ...typography.title,
+    fontSize: 26,
+    lineHeight: 32,
+    color: lightColors.text,
+    letterSpacing: -0.4,
+  },
+  subtitle: {
+    ...typography.body,
+    color: lightColors.textMuted,
+    lineHeight: 22,
+  },
+  summary: {
+    ...typography.body,
+    color: lightColors.textMuted,
+    lineHeight: 22,
+  },
+  calorieBanner: {
+    marginTop: spacing.sm,
+    borderRadius: radius.lg,
+    paddingVertical: 14,
+    paddingHorizontal: spacing.md,
+    gap: 4,
+  },
+  calorieLabel: {
+    ...typography.caption,
+    color: 'rgba(255,255,255,0.85)',
+    fontWeight: '700',
+  },
+  calorieValue: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.3,
+  },
+  chipWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: spacing.xs,
+  },
+  tasteChip: {
+    borderWidth: 1,
+    borderRadius: radius.full,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: 'rgba(212,137,58,0.08)',
+  },
+  tasteChipText: {
+    ...typography.caption,
+    fontWeight: '700',
+  },
+  section: { gap: spacing.sm },
+  sectionTitle: {
+    ...typography.title,
+    fontSize: 22,
+    color: lightColors.text,
+    letterSpacing: -0.3,
+  },
+  lead: {
+    ...typography.body,
+    color: lightColors.text,
+    lineHeight: 24,
+  },
+  ingredientGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  ingredientCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.lg,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: lightColors.border,
+  },
+  ingredientText: {
+    ...typography.subtitle,
+    color: lightColors.text,
+    fontSize: 14,
+  },
+  flavorList: { gap: spacing.sm },
+  flavorCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.md,
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: lightColors.border,
   },
-  flavorEmoji: { fontSize: 20, width: 28, textAlign: 'center' },
-  flavorText: { flex: 1 },
+  flavorIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  flavorEmoji: { fontSize: 18 },
+  flavorText: { flex: 1, gap: 2 },
   flavorLabel: {
-    ...typography.label,
-    color: colors.textMuted,
-    marginBottom: 2,
+    ...typography.caption,
+    color: lightColors.textMuted,
+    fontWeight: '700',
   },
   flavorValue: {
     ...typography.body,
-    color: colors.text,
+    color: lightColors.text,
+    lineHeight: 22,
   },
-  bodyText: { ...typography.body, color: colors.text, lineHeight: 24 },
-  tipLine: {
-    ...typography.body,
-    color: colors.text,
-    lineHeight: 24,
-    marginBottom: 4,
-  },
-  nearbyList: { gap: spacing.sm },
-  nearbyCard: {
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.md,
+  tipCard: {
+    backgroundColor: '#FFF7EC',
+    borderRadius: radius.lg,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'rgba(212,137,58,0.22)',
+  },
+  tipBody: {
+    ...typography.body,
+    color: '#5C4A2E',
+    lineHeight: 22,
+  },
+  allergenStack: { gap: spacing.sm },
+  allergenRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    backgroundColor: '#FFF7F6',
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(232,107,74,0.2)',
+  },
+  allergenEmoji: { fontSize: 18, marginTop: 1 },
+  allergenText: { flex: 1, gap: 2 },
+  allergenCategory: {
+    ...typography.subtitle,
+    color: lightColors.text,
+    fontSize: 15,
+  },
+  allergenDetail: {
+    ...typography.caption,
+    color: lightColors.textMuted,
+    lineHeight: 18,
+  },
+  warnCard: {
+    backgroundColor: '#FFF9EF',
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(232,160,75,0.35)',
+    gap: spacing.sm,
+  },
+  warnRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  warnMark: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    overflow: 'hidden',
+    textAlign: 'center',
+    lineHeight: 18,
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#B86B12',
+    backgroundColor: 'rgba(232,160,75,0.28)',
+  },
+  warnBody: {
+    ...typography.body,
+    color: '#5C4A2E',
+    lineHeight: 22,
+    flex: 1,
+  },
+  nearbyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: lightColors.border,
+    gap: 4,
+    marginBottom: spacing.xs,
   },
   nearbyName: {
     ...typography.subtitle,
-    color: colors.text,
-    marginBottom: spacing.xs,
+    color: lightColors.text,
   },
   nearbyBlurb: {
     ...typography.caption,
-    color: colors.textMuted,
-    lineHeight: 20,
+    color: lightColors.textMuted,
+    lineHeight: 18,
   },
-  exploreBlock: { marginTop: spacing.lg, gap: spacing.lg },
-  exploreGroup: { gap: spacing.xs },
-  exploreTitle: {
-    ...typography.label,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
+  aiNote: {
+    ...typography.caption,
+    color: lightColors.textMuted,
+    marginTop: spacing.xs,
   },
 });

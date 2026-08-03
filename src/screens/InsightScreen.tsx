@@ -26,6 +26,7 @@ import { ChipRow, InsightCard, InsightSection, TagList } from '@/components/Insi
 import { InsightInputBar, type InsightInputBarHandle } from '@/components/InsightInputBar';
 import { MenuTranslatorInsightSections } from '@/components/MenuTranslatorInsightSections';
 import { MedLabelInsightSections } from '@/components/MedLabelInsightSections';
+import { FlightInsightSections } from '@/components/FlightInsightSections';
 import { PalmReaderInsightSections } from '@/components/PalmReaderInsightSections';
 import { PalmReaderThinkingSheet } from '@/components/PalmReaderThinkingSheet';
 import { SharePosterCard, type PosterData } from '@/components/SharePosterCard';
@@ -142,6 +143,7 @@ export function InsightScreen({ navigation, route }: Props) {
   const isFoodScan = agentId === 'food_scan';
   const isPalmReader = agentId === 'palm_reader';
   const isMedLabel = agentId === 'med_label';
+  const isFlightInfo = agentId === 'flight_info';
   // food_explorer 产品名「零食分析」；menu_translator「翻译师」
   const isSnack = agentId === 'food_explorer';
   const isMenuTranslator = agentId === 'menu_translator';
@@ -166,6 +168,8 @@ export function InsightScreen({ navigation, route }: Props) {
     );
   const isMedLabelStyle =
     isMedLabel && Boolean(insight.med_label_reading || insight.narrative);
+  const isFlightStyle =
+    isFlightInfo && Boolean(insight.flight_info || insight.narrative);
   const isTravelStyle = isTravel && hasTravelStructuredFields(insight, agentId);
 
   const hasGroupedChips = Boolean(
@@ -340,7 +344,11 @@ export function InsightScreen({ navigation, route }: Props) {
         {!isPalmReader ? (
         <TouchableOpacity
           activeOpacity={0.92}
-          style={isFoodScan || isMedLabelStyle ? styles.imageWrap : undefined}
+          style={
+            isFoodScan || isMedLabelStyle || isFlightStyle || isSnackStyle
+              ? styles.imageWrap
+              : undefined
+          }
           onPress={() => {
             hapticLight();
             setFullImageVisible(true);
@@ -348,7 +356,11 @@ export function InsightScreen({ navigation, route }: Props) {
         >
           <Image
             source={{ uri: imageUri }}
-            style={[styles.image, (isFoodScan || isMedLabelStyle) && styles.imageFoodScan]}
+            style={[
+              styles.image,
+              (isFoodScan || isMedLabelStyle || isFlightStyle || isSnackStyle) &&
+                styles.imageFoodScan,
+            ]}
             resizeMode="cover"
           />
         </TouchableOpacity>
@@ -375,7 +387,7 @@ export function InsightScreen({ navigation, route }: Props) {
                 {theme.togetherLabel}
               </Text>
             )}
-            {!isMedLabelStyle ? (
+            {!isMedLabelStyle && !isFlightStyle && !isSnackStyle ? (
               <>
                 <Text style={[styles.foodScanTitle, { color: theme.text }]}>{insight.title}</Text>
                 {insight.narrative ? (
@@ -428,6 +440,28 @@ export function InsightScreen({ navigation, route }: Props) {
               {insight.disclaimer}
             </Text>
           </View>
+        ) : isFlightStyle ? (
+          <View style={styles.foodScanBody}>
+            <FlightInsightSections
+              insight={insight}
+              onSelectQuestion={prefillQuestion}
+              theme={theme}
+            />
+            <Text style={[styles.disclaimerLight, { color: theme.textMuted }]}>
+              {insight.disclaimer}
+            </Text>
+          </View>
+        ) : isSnackStyle ? (
+          <View style={styles.foodScanBody}>
+            <SnackInsightSections
+              insight={insight}
+              onSelectQuestion={prefillQuestion}
+              theme={theme}
+            />
+            <Text style={[styles.disclaimerLight, { color: theme.textMuted }]}>
+              {insight.disclaimer}
+            </Text>
+          </View>
         ) : (
         <InsightCard
           title={insight.title}
@@ -438,14 +472,8 @@ export function InsightScreen({ navigation, route }: Props) {
           accentSoft={theme.accentSoft}
           gradientColors={theme.cardGradient}
         >
-          {/* 零食 / 翻译师优先专属区块；其余 Agent 走通用线索 UI */}
-          {isSnackStyle ? (
-            <SnackInsightSections
-              insight={insight}
-              onSelectQuestion={prefillQuestion}
-              theme={theme}
-            />
-          ) : isMenuStyle ? (
+          {/* 翻译师优先专属区块；其余 Agent 走通用线索 UI */}
+          {isMenuStyle ? (
             <MenuTranslatorInsightSections
               insight={insight}
               onSelectQuestion={prefillQuestion}
@@ -619,9 +647,11 @@ export function InsightScreen({ navigation, route }: Props) {
                     ? '想按忌口筛选或再译详细？问我…'
                     : agentId === 'med_label'
                       ? '想了解用法、不良反应或说明书？问我…'
-                      : isTravel
-                        ? '关于行程还有什么想问？…'
-                        : undefined
+                      : agentId === 'flight_info'
+                        ? '想了解登机口、值机或延误？问我…'
+                        : isTravel
+                          ? '关于行程还有什么想问？…'
+                          : undefined
             }
           />
         </View>

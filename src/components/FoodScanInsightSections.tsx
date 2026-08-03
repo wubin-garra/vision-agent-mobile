@@ -19,12 +19,18 @@ export function FoodScanInsightSections({
   onScrollToBottom,
   theme,
 }: Props) {
-  const { chipBg, chipText } = theme;
+  const { chipBg, chipText, accent } = theme;
   const nutrition = insight.nutrition;
   const chips = insight.explore_chips?.culinary ?? [];
+  const clues = insight.visible_clues?.filter(Boolean) ?? [];
+  const tips = insight.nutrition_tips ?? [];
+  const allergens = insight.allergens ?? [];
+  const flavorNotes = insight.flavor_notes ?? [];
 
   return (
     <View style={styles.wrap}>
+      {insight.subtitle ? <Text style={styles.subtitle}>{insight.subtitle}</Text> : null}
+
       {nutrition ? (
         <View style={styles.nutritionBlock}>
           <View style={styles.calorieWrap}>
@@ -78,6 +84,19 @@ export function FoodScanInsightSections({
         </View>
       ) : null}
 
+      {clues.length > 0 ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>盘中食材</Text>
+          <View style={styles.clueWrap}>
+            {clues.map((clue) => (
+              <View key={clue} style={styles.clueChip}>
+                <Text style={styles.clueText}>{clue}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : null}
+
       {insight.diet_summary ? (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>饮食记录</Text>
@@ -85,10 +104,27 @@ export function FoodScanInsightSections({
         </View>
       ) : null}
 
-      {insight.nutrition_tips && insight.nutrition_tips.length > 0 ? (
+      {flavorNotes.length > 0 ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>风味与口感</Text>
+          <View style={styles.flavorList}>
+            {flavorNotes.map((note) => (
+              <View key={`${note.label}-${note.value}`} style={styles.flavorCard}>
+                <Text style={styles.flavorEmoji}>{note.emoji ?? '•'}</Text>
+                <View style={styles.flavorText}>
+                  <Text style={styles.flavorLabel}>{note.label}</Text>
+                  <Text style={styles.flavorValue}>{note.value}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      {tips.length > 0 ? (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>小贴士</Text>
-          {insight.nutrition_tips.map((tip) => (
+          {tips.map((tip) => (
             <View key={tip.title} style={styles.tipItem}>
               <Text style={styles.tipTitle}>• {tip.title}</Text>
               <Text style={styles.tipBody}>{tip.body}</Text>
@@ -97,11 +133,27 @@ export function FoodScanInsightSections({
         </View>
       ) : null}
 
-      {insight.allergens && insight.allergens.length > 0 ? (
+      {insight.context.practical ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>实用建议</Text>
+          <View style={[styles.practicalCard, { borderColor: `${accent}33` }]}>
+            <Text style={styles.body}>{insight.context.practical}</Text>
+          </View>
+        </View>
+      ) : null}
+
+      {insight.context.cultural ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>饮食文化</Text>
+          <Text style={styles.bodyMuted}>{insight.context.cultural}</Text>
+        </View>
+      ) : null}
+
+      {allergens.length > 0 ? (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>安全与过敏原</Text>
           <View style={styles.allergenCard}>
-            {insight.allergens.map((item) => (
+            {allergens.map((item) => (
               <View key={`${item.category}-${item.detail}`} style={styles.allergenRow}>
                 <Text style={styles.allergenLeft}>
                   {item.emoji ? `${item.emoji} ` : ''}
@@ -111,6 +163,18 @@ export function FoodScanInsightSections({
               </View>
             ))}
           </View>
+        </View>
+      ) : null}
+
+      {insight.nearby_picks && insight.nearby_picks.length > 0 ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>周边推荐</Text>
+          {insight.nearby_picks.map((pick) => (
+            <View key={pick.name} style={styles.nearbyCard}>
+              <Text style={styles.nearbyName}>📍 {pick.name}</Text>
+              {pick.blurb ? <Text style={styles.bodyMuted}>{pick.blurb}</Text> : null}
+            </View>
+          ))}
         </View>
       ) : null}
 
@@ -133,6 +197,12 @@ export function FoodScanInsightSections({
 
 const styles = StyleSheet.create({
   wrap: { gap: spacing.lg },
+  subtitle: {
+    ...typography.subtitle,
+    color: lightColors.textMuted,
+    lineHeight: 22,
+    marginTop: -4,
+  },
   nutritionBlock: { gap: 0 },
   calorieWrap: {
     position: 'relative',
@@ -188,6 +258,52 @@ const styles = StyleSheet.create({
     color: lightColors.text,
     lineHeight: 24,
   },
+  bodyMuted: {
+    ...typography.body,
+    color: lightColors.textMuted,
+    lineHeight: 22,
+  },
+  clueWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  clueChip: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.full,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: lightColors.border,
+  },
+  clueText: {
+    ...typography.caption,
+    color: lightColors.text,
+    fontWeight: '600',
+  },
+  flavorList: { gap: spacing.sm },
+  flavorCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: lightColors.border,
+  },
+  flavorEmoji: { fontSize: 20, width: 28, textAlign: 'center' },
+  flavorText: { flex: 1, gap: 2 },
+  flavorLabel: {
+    ...typography.caption,
+    color: lightColors.textMuted,
+    fontWeight: '700',
+  },
+  flavorValue: {
+    ...typography.body,
+    color: lightColors.text,
+    lineHeight: 22,
+  },
   tipItem: { gap: 4, marginBottom: spacing.sm },
   tipTitle: {
     ...typography.subtitle,
@@ -199,6 +315,12 @@ const styles = StyleSheet.create({
     color: lightColors.textMuted,
     lineHeight: 22,
     paddingLeft: spacing.md,
+  },
+  practicalCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
   },
   allergenCard: {
     backgroundColor: '#FFFFFF',
@@ -224,6 +346,18 @@ const styles = StyleSheet.create({
     color: lightColors.textMuted,
     flex: 1,
     textAlign: 'right',
+  },
+  nearbyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: lightColors.border,
+    gap: 4,
+  },
+  nearbyName: {
+    ...typography.subtitle,
+    color: lightColors.text,
   },
   aiNote: {
     ...typography.caption,

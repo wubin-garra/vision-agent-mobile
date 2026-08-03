@@ -144,8 +144,10 @@ export const AGENT_BRANDS: Record<AgentId, AgentBrand> = {
     togetherLabel: '与手相师一起看见 ›',
   },
   food_explorer: {
-    bg: '#12100E',
-    accent: '#E8A04B',
+    light: true,
+    bg: '#FFF9F2',
+    accent: '#D4893A',
+    headerLink: '#B06E2C',
     togetherLabel: '与零食分析一起看见 ›',
   },
   menu_translator: {
@@ -171,8 +173,10 @@ export const AGENT_BRANDS: Record<AgentId, AgentBrand> = {
     togetherLabel: '与酒店入住一起看见 ›',
   },
   flight_info: {
-    bg: '#0A0E14',
-    accent: '#6B9FFF',
+    light: true,
+    bg: '#F2F6FC',
+    accent: '#2F6FD6',
+    headerLink: '#2458B0',
     togetherLabel: '与航班助手一起看见 ›',
   },
   stylist: {
