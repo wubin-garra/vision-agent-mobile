@@ -20,7 +20,6 @@
     },
     "android": {
       "package": "com.anonymous.visionagentmobile",
-      "usesCleartextTraffic": true,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_MEDIA_IMAGES",
