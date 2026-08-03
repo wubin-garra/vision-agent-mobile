@@ -130,7 +130,7 @@ export function ProfileScreen() {
           <Text style={styles.diaryCaption} numberOfLines={2}>
             {item.insight.context.cultural || item.insight.context.practical || item.category}
           </Text>
-          <Image source={{ uri: item.thumbnail_url }} style={styles.diaryImage} />
+          <Image source={{ uri: item.image_url }} style={styles.diaryImage} />
         </View>
       </TouchableOpacity>
     );

@@ -144,8 +144,16 @@ export interface MedLabelReading {
   drug_name?: string | null;
   brand?: string | null;
   active_ingredients?: string[];
+  /** 适应症 / 功能主治 */
   usage?: string | null;
+  /** 用法用量摘要 */
   dosage?: string | null;
+  /** 用法用量分点 */
+  dosage_steps?: string[];
+  /** 不良反应 */
+  adverse_reactions?: string[];
+  /** 说明书要点摘要 */
+  package_insert?: string | null;
   warnings?: string[];
   storage?: string | null;
   translated_summary?: string | null;

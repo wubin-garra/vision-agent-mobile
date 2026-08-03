@@ -283,8 +283,10 @@ export const diaryMemoryDemos: MemoryItem[] = [
   }),
 ];
 
-/** 把本地日记 Demo 与后端记忆合并：Demo 置顶，保证每次打开都有默认可看内容 */
+/** 把本地日记 Demo 与后端记忆合并，并按 created_at 降序（最新在前） */
 export function withDiaryDemoMemories(items: MemoryItem[]): MemoryItem[] {
   const real = items.filter((item) => !isDiaryDemoId(item.id));
-  return [...diaryMemoryDemos, ...real];
+  return [...diaryMemoryDemos, ...real].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  );
 }

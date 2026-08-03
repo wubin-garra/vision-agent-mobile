@@ -592,9 +592,11 @@ export function InsightScreen({ navigation, route }: Props) {
                   ? '想了解配料或热量？问我…'
                   : isMenuTranslator
                     ? '想按忌口筛选或再译详细？问我…'
-                    : isTravel
-                      ? '关于行程还有什么想问？…'
-                      : undefined
+                    : agentId === 'med_label'
+                      ? '想了解用法、不良反应或说明书？问我…'
+                      : isTravel
+                        ? '关于行程还有什么想问？…'
+                        : undefined
             }
           />
         </View>

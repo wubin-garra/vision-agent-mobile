@@ -101,16 +101,8 @@ export function TravelInsightSections({
               ) : null}
               {insight.med_label_reading.usage ? (
                 <MetaRow
-                  label="用途"
+                  label="适应症"
                   value={insight.med_label_reading.usage}
-                  labelColor={textMuted}
-                  valueColor={text}
-                />
-              ) : null}
-              {insight.med_label_reading.dosage ? (
-                <MetaRow
-                  label="用法"
-                  value={insight.med_label_reading.dosage}
                   labelColor={textMuted}
                   valueColor={text}
                 />
@@ -135,6 +127,37 @@ export function TravelInsightSections({
               </Text>
             ) : null}
           </InsightSection>
+
+          {insight.med_label_reading.dosage ||
+          (insight.med_label_reading.dosage_steps?.length ?? 0) > 0 ? (
+            <InsightSection title="用法用量">
+              {insight.med_label_reading.dosage ? (
+                <Text style={[styles.bodyText, { color: text }]}>
+                  {insight.med_label_reading.dosage}
+                </Text>
+              ) : null}
+              {(insight.med_label_reading.dosage_steps?.length ?? 0) > 0 ? (
+                <View style={{ marginTop: insight.med_label_reading.dosage ? spacing.sm : 0 }}>
+                  <TipLines items={insight.med_label_reading.dosage_steps!} color={text} />
+                </View>
+              ) : null}
+            </InsightSection>
+          ) : null}
+
+          {(insight.med_label_reading.adverse_reactions?.length ?? 0) > 0 ? (
+            <InsightSection title="不良反应">
+              <TipLines items={insight.med_label_reading.adverse_reactions!} color={text} />
+            </InsightSection>
+          ) : null}
+
+          {insight.med_label_reading.package_insert ? (
+            <InsightSection title="说明书要点">
+              <Text style={[styles.bodyText, { color: text, lineHeight: 22 }]}>
+                {insight.med_label_reading.package_insert}
+              </Text>
+            </InsightSection>
+          ) : null}
+
           {(insight.med_label_reading.warnings?.length ?? 0) > 0 ? (
             <InsightSection title="警示与禁忌">
               <TipLines items={insight.med_label_reading.warnings!} color={text} />

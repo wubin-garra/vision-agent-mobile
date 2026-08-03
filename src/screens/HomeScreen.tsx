@@ -220,7 +220,7 @@ export function HomeScreen() {
                 onPress={() => openMemory(item)}
                 activeOpacity={0.92}
               >
-                <Image source={{ uri: item.thumbnail_url }} style={styles.feedImage} />
+                <Image source={{ uri: item.image_url }} style={styles.feedImage} />
                 <View style={styles.feedOverlay}>
                   <Text style={styles.feedTitle}>{item.title}</Text>
                   <Text style={styles.feedMeta}>{item.category}</Text>
