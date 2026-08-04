@@ -17,9 +17,9 @@ export const cameraModes: CameraModeItem[] = [
     id: 'auto',
     label: '自动',
     emoji: getAgentEmoji('auto'),
-    prompt: '对准任何画面，让 AI 自动识别并交给对应专项智能体分析。',
+    prompt: '对准任何画面，让 AI 自动识别；只有非常确定时才交给专项镜头，否则做通用解读。',
     description:
-      '识别登机牌、酒店、药品、菜单、正餐、零食、手相、穿搭、景点等，优先路由到已有专项镜头，而不是笼统解读。',
+      '自动识别场景。登机牌、药盒、菜单、正餐等特征非常明确时才进入专项；拿不准就走通用解读，避免误判。',
   },
   {
     id: 'stylist',
