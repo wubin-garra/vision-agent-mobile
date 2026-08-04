@@ -46,8 +46,8 @@ export const cameraModes: CameraModeItem[] = [
     id: 'food_explorer',
     label: '零食分析',
     emoji: getAgentEmoji('food_explorer'),
-    prompt: '对准零食包装或小食，了解成分、风味与食用提示。',
-    description: '识别零食品类与口味，解读配料亮点、过敏原与是否适合当下解馋。',
+    prompt: '对准零食包装袋/盒，了解成分、风味与食用提示。',
+    description: '识别零售零食品类与口味，解读配料亮点、过敏原与是否适合当下解馋（正餐请用食识拍）。',
   },
   {
     id: 'menu_translator',

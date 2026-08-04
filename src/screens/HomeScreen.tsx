@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AgentIcon } from '@/components/AgentIcon';
 import { getAgentCircleBg, hasAgentIcon } from '@/constants/agentAssets';
+import type { AgentAssetId } from '@/constants/agentAssets';
 import { featuredPrompts, perspectives } from '@/constants/homeContent';
 import { isDiaryDemoId, withDiaryDemoMemories } from '@/constants/diaryDemos';
 import {
@@ -55,6 +56,116 @@ const TECH = '#2A6F9E';
 const TECH_DEEP = '#1C344A';
 const ORB_SIZE = 200;
 
+/** 各专项 Agent 圆底色铺成首页氛围（与 agentAssets.circleBg 对齐） */
+const HERO_AGENT_BLOBS: Array<{
+  id: AgentAssetId;
+  top?: number;
+  left?: number;
+  right?: number;
+  bottom?: number;
+  size: number;
+  opacity: number;
+}> = [
+  { id: 'flight_info', top: -56, left: -48, size: 210, opacity: 0.95 },
+  { id: 'menu_translator', top: -20, right: -36, size: 200, opacity: 0.9 },
+  { id: 'food_scan', top: 88, left: -60, size: 170, opacity: 0.85 },
+  { id: 'local_guide', top: 40, left: 120, size: 140, opacity: 0.7 },
+  { id: 'stylist', top: 120, right: 40, size: 150, opacity: 0.8 },
+  { id: 'food_explorer', top: 160, left: 40, size: 130, opacity: 0.75 },
+  { id: 'palm_reader', top: 10, left: 70, size: 110, opacity: 0.65 },
+  { id: 'hotel_guide', bottom: -30, right: 80, size: 120, opacity: 0.7 },
+  { id: 'med_label', bottom: -40, left: 100, size: 110, opacity: 0.65 },
+  { id: 'general_curiosity', top: 70, right: 90, size: 100, opacity: 0.55 },
+];
+
+function HeroAgentAura() {
+  const drift = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(drift, {
+          toValue: 1,
+          duration: 5200,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(drift, {
+          toValue: 0,
+          duration: 5200,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [drift]);
+
+  const shiftA = drift.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 10],
+  });
+  const shiftB = drift.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -8],
+  });
+
+  return (
+    <View style={styles.heroWash} pointerEvents="none">
+      <LinearGradient
+        colors={['#DCECFF', '#D9F3EF', '#FFE8DE', '#FCE4EC', '#FFFFFF']}
+        locations={[0, 0.28, 0.55, 0.78, 1]}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
+
+      {HERO_AGENT_BLOBS.map((blob, index) => {
+        const color = getAgentCircleBg(blob.id);
+        const translateY = index % 2 === 0 ? shiftA : shiftB;
+        return (
+          <Animated.View
+            key={blob.id}
+            style={[
+              styles.agentBlob,
+              {
+                top: blob.top,
+                left: blob.left,
+                right: blob.right,
+                bottom: blob.bottom,
+                width: blob.size,
+                height: blob.size,
+                borderRadius: blob.size / 2,
+                backgroundColor: color,
+                opacity: blob.opacity,
+                transform: [{ translateY }],
+              },
+            ]}
+          />
+        );
+      })}
+
+      {/* 左侧阅读区提亮，保证标题可读 */}
+      <LinearGradient
+        colors={['rgba(255,255,255,0.55)', 'rgba(255,255,255,0.2)', 'rgba(255,255,255,0)']}
+        locations={[0, 0.45, 1]}
+        style={styles.heroReadVeil}
+        start={{ x: 0, y: 0.3 }}
+        end={{ x: 1, y: 0.5 }}
+      />
+      <LinearGradient
+        colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.85)', '#FFFFFF']}
+        locations={[0.35, 0.82, 1]}
+        style={styles.heroFadeDown}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+      />
+      <HeroTechOrb />
+    </View>
+  );
+}
+
 /** 首页右上角科技 HUD：旋转刻度环 + 反向扫描弧 + 扫描线 + 核心脉冲 */
 function HeroTechOrb() {
   const spin = useRef(new Animated.Value(0)).current;
@@ -84,8 +195,8 @@ function HeroTechOrb() {
       Animated.loop(
         Animated.timing(scan, {
           toValue: 1,
-          duration: 2600,
-          easing: Easing.inOut(Easing.cubic),
+          duration: 3200,
+          easing: Easing.linear,
           useNativeDriver: true,
         }),
       ),
@@ -137,7 +248,7 @@ function HeroTechOrb() {
   });
   const scanRotate = scan.interpolate({
     inputRange: [0, 1],
-    outputRange: ['-50deg', '230deg'],
+    outputRange: ['0deg', '360deg'],
   });
   const coreScale = pulse.interpolate({
     inputRange: [0, 1],
@@ -356,22 +467,7 @@ export function HomeScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         {/* Hero：通栏品牌场，非卡片 */}
         <View style={styles.hero}>
-          <LinearGradient
-            colors={['#E7EEF4', '#F4F1EC', '#FFFFFF']}
-            locations={[0, 0.55, 1]}
-            style={StyleSheet.absoluteFill}
-            start={{ x: 0.1, y: 0 }}
-            end={{ x: 0.9, y: 1 }}
-          />
-          <View style={styles.heroWash} pointerEvents="none">
-            <LinearGradient
-              colors={['rgba(42,111,158,0.16)', 'rgba(42,111,158,0)']}
-              style={styles.heroWashBlob}
-              start={{ x: 0.2, y: 0 }}
-              end={{ x: 0.8, y: 1 }}
-            />
-            <HeroTechOrb />
-          </View>
+          <HeroAgentAura />
 
           <Animated.View
             style={[
@@ -530,20 +626,22 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: lightColors.bg },
   content: { paddingBottom: spacing.xxl },
   hero: {
-    minHeight: 268,
+    minHeight: 288,
     overflow: 'hidden',
     paddingBottom: spacing.md,
   },
   heroWash: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
-  heroWashBlob: {
+  agentBlob: {
     position: 'absolute',
-    top: -40,
-    right: -30,
-    width: 220,
-    height: 220,
-    borderRadius: 110,
+  },
+  heroReadVeil: {
+    ...StyleSheet.absoluteFill,
+    width: '72%',
+  },
+  heroFadeDown: {
+    ...StyleSheet.absoluteFill,
   },
   orbWrap: {
     position: 'absolute',
@@ -553,7 +651,7 @@ const styles = StyleSheet.create({
     height: ORB_SIZE,
   },
   orbLayer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
   },
