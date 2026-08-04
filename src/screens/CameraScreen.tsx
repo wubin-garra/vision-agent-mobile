@@ -23,6 +23,7 @@ import {
   AnalysisThinkingOverlay,
   type ThinkingVariant,
 } from '@/components/AnalysisThinkingOverlay';
+import { AgentMismatchSheet } from '@/components/AgentMismatchSheet';
 import { BirthdayCollectSheet } from '@/components/BirthdayCollectSheet';
 import { CreditsBadge } from '@/components/CreditsBadge';
 import { API_BASE_URL, API_MISCONFIGURED, AGENT_LABELS, formatApiError } from '@/constants/config';
@@ -45,7 +46,7 @@ import {
   orderCameraModes,
   type CameraModeItem,
 } from '@/constants/cameraModes';
-import type { AgentId } from '@/types/insight';
+import type { AgentId, AgentMismatchInfo, AnalyzeResponse } from '@/types/insight';
 import { useNativeCameraZoom } from '@/hooks/useNativeCameraZoom';
 import { analyzeImageStream } from '@/services/api';
 import { track } from '@/services/analytics';
@@ -55,6 +56,7 @@ import { colors, lightColors, radius, spacing, typography } from '@/theme';
 import type { RootStackParamList } from '@/types/navigation';
 import { getCurrentCoordinates } from '@/utils/location';
 import { cropCaptureToViewport, getCaptureCropRatio } from '@/utils/captureCrop';
+import { resolveAnalyzeMismatch } from '@/utils/agentMismatch';
 import { hapticLight, hapticMedium, hapticSelection } from '@/utils/haptics';
 
 /** 前后摄切换：双向弧形箭头 */
@@ -130,6 +132,10 @@ export function CameraScreen() {
     uri: string;
     source: 'camera' | 'gallery';
   } | null>(null);
+  const [mismatchInfo, setMismatchInfo] = useState<AgentMismatchInfo | null>(null);
+  const [mismatchVisible, setMismatchVisible] = useState(false);
+  const [analyzeNotice, setAnalyzeNotice] = useState<string | null>(null);
+  const pendingInsightRef = useRef<AnalyzeResponse | null>(null);
   const { selectedAgent, setSelectedAgent, birthday, setBirthday } = useSessionStore();
   const favoriteIds = useFavoriteModesStore((s) => s.favoriteIds);
   const hydrateFavorites = useFavoriteModesStore((s) => s.hydrate);
@@ -224,6 +230,31 @@ export function CameraScreen() {
     };
   }, [analyzing, thinkingVariant]);
 
+  const navigateToInsight = (result: AnalyzeResponse, uri: string) => {
+    navigation.navigate('Insight', {
+      memoryId: result.memory_id,
+      imageUri: uri,
+      insight: result.insight,
+      followupChips: result.followup_chips,
+      agentId: result.agent_id,
+      entryMode: 'fresh',
+      thinkingSteps:
+        thinkingStepsRef.current.length > 0 ? thinkingStepsRef.current : undefined,
+    });
+  };
+
+  const clearAnalyzeUi = () => {
+    setAnalyzing(false);
+    setStatus('');
+    setAnalyzeStage('');
+    setThinkingStep(undefined);
+    thinkingStepsRef.current = [];
+    setThinkingSteps([]);
+    setPreviewUri(null);
+    setPendingAnalyze(null);
+    setAnalyzeNotice(null);
+  };
+
   const runAnalyze = async (
     uri: string,
     source: 'camera' | 'gallery',
@@ -238,9 +269,17 @@ export function CameraScreen() {
     const startedAt = Date.now();
     track('analyze_start', { agent: mode, source });
 
+    setMismatchVisible(false);
+    setMismatchInfo(null);
+    pendingInsightRef.current = null;
     setPreviewUri(uri);
     setLastPhoto(uri);
     setAnalyzing(true);
+    setAnalyzeNotice(
+      mode !== 'auto'
+        ? `上传后会确认是否适合「${AGENT_LABELS[mode] ?? mode}」`
+        : null,
+    );
     setStatus(statusForStage('uploading', thinkingVariant));
     setAnalyzeStage('uploading');
     setThinkingStep(undefined);
@@ -254,9 +293,23 @@ export function CameraScreen() {
           onStatus: (stage) => {
             setAnalyzeStage(stage);
             setStatus(statusForStage(stage, thinkingVariant));
+            if (stage === 'captioning' && mode !== 'auto') {
+              setAnalyzeNotice(
+                `正在核对照片是否对题「${AGENT_LABELS[mode] ?? mode}」…`,
+              );
+            }
+            if (stage === 'mismatch') {
+              setAnalyzeNotice('这张照片和当前镜头不太对题，正在调整解读方式…');
+            }
           },
           onThinking: () => {
             // 步骤节奏由客户端 durationsMs 控制
+          },
+          onMismatch: (info) => {
+            setMismatchInfo(info);
+            setAnalyzeNotice(info.message);
+            setAnalyzeStage('mismatch');
+            setStatus('换一张照片可能更合适');
           },
           onPartial: (partial) => setStatus(`${partial.title} · ${partial.category}`),
         },
@@ -270,18 +323,12 @@ export function CameraScreen() {
 
       if (!result) throw new Error('分析失败');
 
-      // 专项镜头被服务端静默忽略时（旧版 API 未识别 agent_override）会落到自动路由
-      if (mode !== 'auto' && result.agent_id !== mode) {
-        track('analyze_agent_mismatch', {
-          requested: mode,
-          actual: result.agent_id,
-          source,
-        });
-        Alert.alert(
-          '镜头未生效',
-          `你选择的是「${AGENT_LABELS[mode] ?? mode}」，但当前后端返回了「${AGENT_LABELS[result.agent_id] ?? result.agent_id}」。\n\n多半是线上 API 尚未部署该镜头。请更新 vision-agent-api 后重试，或将 EXPO_PUBLIC_API_URL 指向本地已更新的后端。`,
-        );
-      }
+      const mismatch = resolveAnalyzeMismatch({
+        requestedMode: mode,
+        resultAgentId: result.agent_id,
+        serverMismatch: result.agent_mismatch,
+        insight: result.insight,
+      });
 
       track('analyze_success', {
         agent: result.agent_id,
@@ -290,18 +337,28 @@ export function CameraScreen() {
         duration_ms: Date.now() - startedAt,
         has_location: Boolean(coordinates),
         has_birthday: Boolean(birthdayOverride),
+        agent_mismatch: Boolean(mismatch),
       });
 
-      navigation.navigate('Insight', {
-        memoryId: result.memory_id,
-        imageUri: uri,
-        insight: result.insight,
-        followupChips: result.followup_chips,
-        agentId: result.agent_id,
-        entryMode: 'fresh',
-        thinkingSteps:
-          thinkingStepsRef.current.length > 0 ? thinkingStepsRef.current : undefined,
-      });
+      if (mismatch) {
+        track('analyze_agent_mismatch', {
+          requested: mismatch.requested_agent,
+          actual: mismatch.suggested_agent,
+          reason: mismatch.reason,
+          source,
+        });
+        pendingInsightRef.current = result;
+        setMismatchInfo(mismatch);
+        setAnalyzing(false);
+        setAnalyzeNotice(null);
+        setStatus('');
+        setAnalyzeStage('');
+        setMismatchVisible(true);
+        return;
+      }
+
+      navigateToInsight(result, uri);
+      clearAnalyzeUi();
     } catch (error) {
       track('analyze_fail', {
         agent: mode,
@@ -310,15 +367,7 @@ export function CameraScreen() {
         error: error instanceof Error ? error.message : 'unknown',
       });
       Alert.alert('分析失败', formatApiError(error));
-    } finally {
-      setAnalyzing(false);
-      setStatus('');
-      setAnalyzeStage('');
-      setThinkingStep(undefined);
-      thinkingStepsRef.current = [];
-      setThinkingSteps([]);
-      setPreviewUri(null);
-      setPendingAnalyze(null);
+      clearAnalyzeUi();
     }
   };
 
@@ -334,7 +383,7 @@ export function CameraScreen() {
   };
 
   const capturePhoto = async () => {
-    if (!cameraRef.current || analyzing || birthdaySheetVisible) return;
+    if (!cameraRef.current || analyzing || birthdaySheetVisible || mismatchVisible) return;
     hapticMedium();
     try {
       const { zoom: captureZoom } = await prepareForCapture();
@@ -452,7 +501,7 @@ export function CameraScreen() {
           previewSizeRef.current = { width, height };
         }}
       >
-        {!analyzing && !birthdaySheetVisible ? (
+        {!analyzing && !birthdaySheetVisible && !mismatchVisible ? (
           <GestureDetector gesture={pinchGesture}>
             <CameraView
               ref={cameraRef}
@@ -474,7 +523,7 @@ export function CameraScreen() {
           <View style={styles.frozenPreview} />
         )}
 
-        {!analyzing && !birthdaySheetVisible ? (
+        {!analyzing && !birthdaySheetVisible && !mismatchVisible ? (
           isPalmReaderMode ? <PalmCameraGuide /> : <CameraScanFrame />
         ) : null}
 
@@ -644,6 +693,44 @@ export function CameraScreen() {
         }}
       />
 
+      <AgentMismatchSheet
+        visible={mismatchVisible}
+        mismatch={mismatchInfo}
+        onRetake={() => {
+          track('analyze_mismatch_retake', {
+            requested: mismatchInfo?.requested_agent,
+            suggested: mismatchInfo?.suggested_agent,
+          });
+          setMismatchVisible(false);
+          setMismatchInfo(null);
+          pendingInsightRef.current = null;
+          setPreviewUri(null);
+          setPendingAnalyze(null);
+          setAnalyzeNotice(null);
+        }}
+        onContinue={() => {
+          const pending = pendingInsightRef.current;
+          const uri = previewUri ?? lastPhoto;
+          track('analyze_mismatch_continue', {
+            requested: mismatchInfo?.requested_agent,
+            suggested: mismatchInfo?.suggested_agent,
+          });
+          setMismatchVisible(false);
+          setMismatchInfo(null);
+          if (pending && uri) {
+            navigateToInsight(pending, uri);
+          }
+          pendingInsightRef.current = null;
+          clearAnalyzeUi();
+        }}
+        onClose={() => {
+          setMismatchVisible(false);
+          setMismatchInfo(null);
+          pendingInsightRef.current = null;
+          clearAnalyzeUi();
+        }}
+      />
+
       {/* 所有镜头分析时都展示等待浮层，避免只剩快门转圈 */}
       {analyzing ? (
         <AnalysisThinkingOverlay
@@ -651,6 +738,7 @@ export function CameraScreen() {
           stage={analyzeStage}
           thinkingStep={thinkingStep}
           variant={thinkingVariant}
+          notice={analyzeNotice}
         />
       ) : null}
     </View>
@@ -693,12 +781,15 @@ function statusForStage(stage: string, variant: ThinkingVariant): string {
   const phrases = pack?.stagePhrases[stage] ?? pack?.stagePhrases.default;
   if (phrases?.[0]) return phrases[0];
 
+  if (stage === 'mismatch') return '这张照片和当前镜头不太对题…';
   if (variant === 'palm_reader') {
     if (stage === 'uploading') return '正在上传掌心照片…';
+    if (stage === 'captioning') return '正在核对是否为掌心…';
     if (stage === 'analyzing') return '正在生成手相洞察…';
   }
   if (variant === 'food_scan') {
     if (stage === 'uploading') return '正在上传餐食照片…';
+    if (stage === 'captioning') return '正在核对是否为餐食…';
     if (stage === 'analyzing') return '正在生成营养报告…';
   }
   if (stage === 'uploading') return '正在上传图片…';

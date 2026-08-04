@@ -35,6 +35,8 @@ type Props = {
   stage?: string;
   thinkingStep?: string;
   variant?: ThinkingVariant;
+  /** 分析过程中的对题提示（如照片与镜头不匹配） */
+  notice?: string | null;
 };
 
 function useRotatingPhrase(phrases: string[], intervalMs = 2200) {
@@ -90,6 +92,7 @@ export function AnalysisThinkingOverlay({
   stage,
   thinkingStep,
   variant = 'general',
+  notice = null,
 }: Props) {
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
   const lastStepRef = useRef<string | undefined>(undefined);
@@ -154,7 +157,13 @@ export function AnalysisThinkingOverlay({
   }, [pulseAnim]);
 
   const stagePhrases =
-    config.stagePhrases[stage ?? ''] ?? config.stagePhrases.default;
+    stage === 'mismatch'
+      ? [
+          '这张照片和当前镜头不太对题…',
+          '正在改用更合适的解读方式…',
+          '你可以稍后换一张更对题的照片',
+        ]
+      : (config.stagePhrases[stage ?? ''] ?? config.stagePhrases.default);
   const stagePhrase = useRotatingPhrase(stagePhrases, 2400);
 
   const stepDetails = thinkingStep
@@ -170,7 +179,10 @@ export function AnalysisThinkingOverlay({
       )
     : config.steps.slice(0, 1);
 
-  const stageTitle = config.stageLabels[stage ?? ''] ?? config.fallbackTitle;
+  const stageTitle =
+    stage === 'mismatch'
+      ? '换一张可能更合适'
+      : (config.stageLabels[stage ?? ''] ?? config.fallbackTitle);
 
   const scanLeft = scanAnim.interpolate({
     inputRange: [0, 1],
@@ -247,6 +259,12 @@ export function AnalysisThinkingOverlay({
           <Text style={styles.inputPlaceholder}>{inputHint}</Text>
           <ThinkingDots />
         </View>
+
+        {notice ? (
+          <View style={styles.noticeBanner}>
+            <Text style={styles.noticeText}>{notice}</Text>
+          </View>
+        ) : null}
       </View>
     </View>
   );
@@ -417,6 +435,19 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: lightColors.textMuted,
     flex: 1,
+  },
+  noticeBanner: {
+    marginTop: spacing.md,
+    backgroundColor: 'rgba(17,17,17,0.06)',
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+  },
+  noticeText: {
+    ...typography.caption,
+    color: lightColors.text,
+    fontSize: 13,
+    lineHeight: 18,
   },
   dots: {
     ...typography.body,

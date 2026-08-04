@@ -87,6 +87,7 @@ export interface StreamAnalyzeCallbacks {
   onAgent?: (agentId: AgentId) => void;
   onThinking?: (payload: { step: string; index: number }) => void;
   onPartial?: (partial: { title: string; category: string; confidence: number }) => void;
+  onMismatch?: (mismatch: NonNullable<AnalyzeResponse['agent_mismatch']>) => void;
   onComplete?: (result: AnalyzeResponse) => void;
   onError?: (error: Error) => void;
 }
@@ -112,9 +113,18 @@ export async function analyzeImageStream(
     // 分阶段推进 UI：上传 → 读图 → 分析（真实请求在 analyzing）
     await new Promise((resolve) => setTimeout(resolve, 700));
     callbacks.onStatus?.('captioning');
-    await new Promise((resolve) => setTimeout(resolve, 450));
+    if (options?.agentOverride) {
+      // 专项镜头：读图阶段提示会核对是否对题
+      await new Promise((resolve) => setTimeout(resolve, 350));
+    } else {
+      await new Promise((resolve) => setTimeout(resolve, 450));
+    }
     callbacks.onStatus?.('analyzing');
     const result = await analyzeImage(imageUri, options);
+    if (result.agent_mismatch) {
+      callbacks.onStatus?.('mismatch');
+      callbacks.onMismatch?.(result.agent_mismatch);
+    }
     callbacks.onAgent?.(result.agent_id);
     callbacks.onPartial?.({
       title: result.insight.title,

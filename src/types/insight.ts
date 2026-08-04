@@ -244,6 +244,14 @@ export interface StructuredInsight {
   flight_info?: FlightInfo | null;
 }
 
+export interface AgentMismatchInfo {
+  requested_agent: AgentId;
+  suggested_agent: AgentId;
+  title: string;
+  message: string;
+  reason?: string;
+}
+
 export interface AnalyzeResponse {
   memory_id: string;
   agent_id: AgentId;
@@ -251,6 +259,8 @@ export interface AnalyzeResponse {
   insight: StructuredInsight;
   image_url: string;
   thumbnail_url: string;
+  /** 专项镜头与照片明显不对题时返回 */
+  agent_mismatch?: AgentMismatchInfo | null;
 }
 
 export interface MemoryItem {
